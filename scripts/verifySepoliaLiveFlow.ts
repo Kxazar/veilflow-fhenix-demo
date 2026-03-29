@@ -2,7 +2,7 @@ import { readFileSync } from 'fs'
 import path from 'path'
 
 import hre from 'hardhat'
-import { Wallet } from 'ethers'
+import { NonceManager, Wallet } from 'ethers'
 import { cofhejs, Encryptable, FheTypes } from 'cofhejs/node'
 
 type DeploymentManifest = {
@@ -39,6 +39,7 @@ async function initializeWallet(wallet: Wallet) {
     ethersProvider: hre.ethers.provider,
     ethersSigner: wallet,
     environment: 'TESTNET',
+    generatePermit: true,
     securityZones: [0],
     ...TESTNET_ENDPOINTS,
   })
@@ -46,6 +47,9 @@ async function initializeWallet(wallet: Wallet) {
   if (!result.success) {
     throw new Error(result.error.message)
   }
+
+  const permit = result.data ?? cofhejs.getPermit().data
+  return permit?.getHash()
 }
 
 async function encryptUint8(value: bigint) {
@@ -65,6 +69,27 @@ async function readManifest() {
   return JSON.parse(readFileSync(manifestPath, 'utf8')) as DeploymentManifest
 }
 
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function waitForBalanceDecrypt(
+  voteToken: Awaited<ReturnType<typeof hre.ethers.getContractAt>>,
+  account: string,
+  retries = 15,
+  delayMs = 2000,
+) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const [amount, decrypted] = await voteToken.getDecryptBalanceResultSafe(account)
+    if (decrypted) {
+      return amount
+    }
+    await sleep(delayMs)
+  }
+
+  return null
+}
+
 async function main() {
   if (hre.network.name !== 'eth-sepolia') {
     throw new Error(`This verification script expects eth-sepolia, received ${hre.network.name}.`)
@@ -76,7 +101,8 @@ async function main() {
   }
 
   const manifest = await readManifest()
-  const wallet = new Wallet(privateKey, hre.ethers.provider)
+  const rawWallet = new Wallet(privateKey, hre.ethers.provider)
+  const wallet = new NonceManager(rawWallet)
 
   const [voteToken, voteFaucet, gaugeController] = await Promise.all([
     hre.ethers.getContractAt('VeilToken', manifest.contracts.voteToken, wallet),
@@ -121,13 +147,14 @@ async function main() {
     throw new Error('Missing expected assets or pools in the deployment manifest.')
   }
 
-  const balanceBefore = await hre.ethers.provider.getBalance(wallet.address)
-  console.log(`Wallet: ${wallet.address}`)
+  const walletAddress = rawWallet.address
+  const balanceBefore = await hre.ethers.provider.getBalance(walletAddress)
+  console.log(`Wallet: ${walletAddress}`)
   console.log(`Sepolia ETH before verification: ${hre.ethers.formatEther(balanceBefore)}`)
 
-  await initializeWallet(wallet)
+  const permitHash = await initializeWallet(rawWallet)
 
-  if (await voteFaucet.canClaim(wallet.address)) {
+  if (await voteFaucet.canClaim(walletAddress)) {
     const tx = await voteFaucet.claim()
     await tx.wait()
     console.log(`NTRA faucet claim succeeded: ${tx.hash}`)
@@ -136,7 +163,7 @@ async function main() {
   }
 
   for (const asset of [fhEth, fhUsdc, wBtc, sDai]) {
-    if (await asset.faucetContract.canClaim(wallet.address)) {
+    if (await asset.faucetContract.canClaim(walletAddress)) {
       const tx = await asset.faucetContract.claim()
       await tx.wait()
       console.log(`${asset.symbol} faucet claim succeeded: ${tx.hash}`)
@@ -145,7 +172,7 @@ async function main() {
     }
   }
 
-  const lockPosition = await gaugeController.locks(wallet.address)
+  const lockPosition = await gaugeController.locks(walletAddress)
   if (lockPosition.amount === 0n) {
     await (await voteToken.approve(await gaugeController.getAddress(), 100n)).wait()
     const lockTx = await gaugeController.lock(60n, BigInt(2 * 365 * 24 * 60 * 60))
@@ -163,24 +190,40 @@ async function main() {
     console.log(`Existing lock detected, reusing it. Amount=${lockPosition.amount.toString()} unlock=${lockPosition.unlockTime.toString()}`)
   }
 
-  const publicBalance = await voteToken.balanceOf(wallet.address)
+  const publicBalance = await voteToken.balanceOf(walletAddress)
   if (publicBalance >= 20n) {
-    const wrapTx = await voteToken.wrap(wallet.address, 20n)
+    const wrapTx = await voteToken.wrap(walletAddress, 20n)
     await wrapTx.wait()
     console.log(`NTRA wrap succeeded: ${wrapTx.hash}`)
   } else {
     console.log(`Public NTRA balance too small to wrap 20, current=${publicBalance.toString()}`)
   }
 
-  const encryptedWrappedBalance = await voteToken.encBalances(wallet.address)
-  const wrappedBalance = await cofhejs.unseal(encryptedWrappedBalance, FheTypes.Uint128)
-  if (!wrappedBalance.success) {
-    throw new Error(wrappedBalance.error.message)
+  const encryptedWrappedBalance = await voteToken.encBalances(walletAddress)
+  const wrappedBalance = permitHash
+    ? await cofhejs.decrypt(encryptedWrappedBalance, FheTypes.Uint128, walletAddress, permitHash)
+    : null
+
+  if (wrappedBalance?.success) {
+    console.log(`Wrapped NTRA decrypted for holder: ${wrappedBalance.data.toString()}`)
+  } else {
+    console.log(
+      `Permit decrypt for wrapped NTRA was unavailable${wrappedBalance ? `: ${wrappedBalance.error.message}` : ''}. Falling back to contract-side decrypt.`,
+    )
+
+    const decryptTx = await voteToken.decryptBalance(walletAddress)
+    await decryptTx.wait()
+
+    const fallbackBalance = await waitForBalanceDecrypt(voteToken, walletAddress)
+    if (fallbackBalance === null) {
+      console.log('Wrapped NTRA decrypt is still pending on Sepolia after the fallback request.')
+    } else {
+      console.log(`Wrapped NTRA decrypted for holder: ${fallbackBalance.toString()}`)
+    }
   }
-  console.log(`Wrapped NTRA decrypted for holder: ${wrappedBalance.data.toString()}`)
 
   const epochId = await gaugeController.currentEpoch()
-  const alreadyVoted = await gaugeController.hasVotedInEpoch(epochId, wallet.address)
+  const alreadyVoted = await gaugeController.hasVotedInEpoch(epochId, walletAddress)
   if (!alreadyVoted) {
     const voteTx = await gaugeController.vote(epochId, await encryptUint8(2n))
     await voteTx.wait()
@@ -190,8 +233,13 @@ async function main() {
   }
 
   const hiddenGaugeHandle = await gaugeController.getEncryptedGaugeWeight(epochId, 2)
-  const hiddenGaugeProbe = await cofhejs.unseal(hiddenGaugeHandle, FheTypes.Uint128)
-  console.log(`Pre-reveal gauge decrypt success: ${hiddenGaugeProbe.success}`)
+  const hiddenGaugeProbe = permitHash
+    ? await cofhejs.decrypt(hiddenGaugeHandle, FheTypes.Uint128, walletAddress, permitHash)
+    : null
+  console.log(`Pre-reveal gauge decrypt success: ${hiddenGaugeProbe?.success ?? false}`)
+  if (hiddenGaugeProbe && !hiddenGaugeProbe.success) {
+    console.log(`Pre-reveal gauge decrypt blocked as expected: ${hiddenGaugeProbe.error.message}`)
+  }
 
   const quotedSwapOut = await wBtcEthPool.poolContract.getAmountOut(await wBtc.tokenContract.getAddress(), 10n)
   await (await wBtc.tokenContract.approve(await wBtcEthPool.poolContract.getAddress(), 10n)).wait()
@@ -217,11 +265,11 @@ async function main() {
   await lp2Tx.wait()
   console.log(`sDAI/fhUSDC LP add succeeded: ${lp2Tx.hash}`)
 
-  const ethUsdcLpBalance = await ethUsdcPool.poolContract.balanceOf(wallet.address)
-  const sDaiUsdcLpBalance = await sDaiUsdcPool.poolContract.balanceOf(wallet.address)
-  const votingPower = await gaugeController.votingPowerOf(wallet.address)
-  const ntraCooldown = await voteFaucet.getNextClaimAt(wallet.address)
-  const balanceAfter = await hre.ethers.provider.getBalance(wallet.address)
+  const ethUsdcLpBalance = await ethUsdcPool.poolContract.balanceOf(walletAddress)
+  const sDaiUsdcLpBalance = await sDaiUsdcPool.poolContract.balanceOf(walletAddress)
+  const votingPower = await gaugeController.votingPowerOf(walletAddress)
+  const ntraCooldown = await voteFaucet.getNextClaimAt(walletAddress)
+  const balanceAfter = await hre.ethers.provider.getBalance(walletAddress)
 
   console.log(`Live verification summary:`)
   console.log(`- veNTRA voting power: ${votingPower.toString()}`)

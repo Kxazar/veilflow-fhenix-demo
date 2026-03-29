@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { ArchitecturePanel } from '@/components/ArchitecturePanel'
 import { LogoMark } from '@/components/LogoMark'
 import { ProtocolTabs } from '@/components/ProtocolTabs'
+import { WalletControls } from '@/components/WalletControls'
 import { brand } from '@/lib/brand'
 import { demoEpoch, demoPools } from '@/lib/demo-data'
 
@@ -42,19 +43,22 @@ export function LandingShell() {
   return (
     <main className="page-shell">
       <section className="panel top-surface-nav" id="protocol-workspace">
-        <div className="tab-row workspace-tab-row" role="tablist" aria-label="Workspace sections">
-          {workspaceTabs.map((tab) => (
-            <button
-              key={tab.id}
-              aria-selected={activeTab === tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'tab-button-active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-              role="tab"
-              type="button"
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="top-nav-shell">
+          <div className="tab-row workspace-tab-row" role="tablist" aria-label="Workspace sections">
+            {workspaceTabs.map((tab) => (
+              <button
+                key={tab.id}
+                aria-selected={activeTab === tab.id}
+                className={`tab-button ${activeTab === tab.id ? 'tab-button-active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                type="button"
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <WalletControls />
         </div>
       </section>
 
