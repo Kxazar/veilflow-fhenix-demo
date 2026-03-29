@@ -4,27 +4,27 @@ import { useState } from 'react'
 
 import { FaucetPanel } from '@/components/FaucetPanel'
 import { GaugeBoard } from '@/components/GaugeBoard'
+import { LiquidityPanel } from '@/components/LiquidityPanel'
 import { LockPlanner } from '@/components/LockPlanner'
-import { StableMintPanel } from '@/components/StableMintPanel'
-import { SwapAndLpPanel } from '@/components/SwapAndLpPanel'
+import { SwapPanel } from '@/components/SwapPanel'
 import { brand } from '@/lib/brand'
 
 const tabs = [
   { id: 'faucet', label: 'Faucet' },
+  { id: 'swap', label: 'Swap' },
+  { id: 'lp', label: 'LP' },
   { id: 'governance', label: brand.veGovernanceTokenSymbol },
   { id: 'gauges', label: 'Shadow Gauges' },
-  { id: 'pools', label: 'Swap & LP' },
-  { id: 'stable', label: brand.stableTokenSymbol },
 ] as const
 
 type TabId = (typeof tabs)[number]['id']
 
 const visibilityRows = [
-  { label: 'Public to everyone', value: 'lock notional, approved LP deposits, emission budget, whitelisted pools' },
+  { label: 'Public to everyone', value: 'pool reserves, LP balances, emission budget, and active market inventory' },
   { label: 'Hidden until reveal', value: 'which gauge a voter selected and the per-gauge totals during the epoch' },
   {
     label: 'Only the holder can reveal',
-    value: `wrapped ${brand.governanceTokenSymbol} balances, ${brand.stableTokenSymbol} balance, and ${brand.stableTokenSymbol} debt`,
+    value: `wrapped ${brand.governanceTokenSymbol} balances and decrypted outputs tied to the holder permit`,
   },
 ]
 
@@ -39,8 +39,8 @@ export function ProtocolTabs() {
           <h2>Every system rail gets its own lane</h2>
         </div>
         <p className="protocol-header-copy">
-          Each tab isolates one user journey so governance, shadow routing, pool building, and private credit do not
-          compete for attention on the same screen.
+          Each tab isolates one user journey so onboarding, routing, LP formation, and ve-style governance stay clean
+          and readable on the same screen.
         </p>
       </div>
 
@@ -72,10 +72,10 @@ export function ProtocolTabs() {
         </div>
 
         {activeTab === 'faucet' ? <FaucetPanel /> : null}
+        {activeTab === 'swap' ? <SwapPanel /> : null}
+        {activeTab === 'lp' ? <LiquidityPanel /> : null}
         {activeTab === 'governance' ? <LockPlanner /> : null}
         {activeTab === 'gauges' ? <GaugeBoard /> : null}
-        {activeTab === 'pools' ? <SwapAndLpPanel /> : null}
-        {activeTab === 'stable' ? <StableMintPanel /> : null}
       </div>
     </section>
   )

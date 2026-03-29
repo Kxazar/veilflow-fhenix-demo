@@ -1,10 +1,8 @@
 import { LogoMark } from '@/components/LogoMark'
-import { ModeStatus } from '@/components/ModeStatus'
 import { ProtocolTabs } from '@/components/ProtocolTabs'
-import { WalletPanel } from '@/components/WalletPanel'
 import { ArchitecturePanel } from '@/components/ArchitecturePanel'
 import { brand } from '@/lib/brand'
-import { demoEpoch, demoStablePosition } from '@/lib/demo-data'
+import { demoEpoch, demoPools } from '@/lib/demo-data'
 
 const heroStats = [
   {
@@ -16,15 +14,15 @@ const heroStats = [
     value: `${demoEpoch.weeklyEmission}`,
   },
   {
-    label: `${brand.stableTokenSymbol} mint ceiling`,
-    value: `${demoStablePosition.maxMintableAt160}`,
+    label: 'Active liquidity lanes',
+    value: String(demoPools.length),
   },
 ]
 
 const heroTags = [
   'Confidential gauge routing',
-  'Active swap and LP markets',
-  'LP-backed private credit',
+  'On-chain swap execution',
+  'LP-powered weekly emissions',
 ]
 
 export default function HomePage() {
@@ -41,7 +39,7 @@ export default function HomePage() {
         <div className="brand-links">
           <span className="brand-pill">ve-style emissions</span>
           <span className="brand-pill">shadow gauges</span>
-          <span className="brand-pill">{brand.stableTokenSymbol} rail</span>
+          <span className="brand-pill">swap + LP rails</span>
         </div>
       </section>
 
@@ -51,9 +49,9 @@ export default function HomePage() {
             <p className="eyebrow">{brand.short}</p>
             <h1>Shadow liquidity, loud market presence.</h1>
             <p className="hero-text">
-              {brand.protocol} is a Fhenix-native protocol surface for encrypted gauge voting, active LP formation, and
-              private stablecoin credit. It brings Curve and Aerodrome style coordination into a darker, more tactical
-              interface language.
+              {brand.protocol} is a Fhenix-native coordination surface for encrypted gauge voting, live swaps, and LP
+              formation. It brings Curve and Aerodrome style emissions into a sharper interface built around hidden
+              intent and visible market action.
             </p>
 
             <div className="hero-actions">
@@ -61,8 +59,8 @@ export default function HomePage() {
                 Enter control surface
               </a>
               <p className="hero-note">
-                {brand.governanceTokenSymbol} governs emissions, {brand.veGovernanceTokenSymbol} decays over time, and{' '}
-                {brand.stableTokenSymbol} stays private until the holder reveals it.
+                {brand.governanceTokenSymbol} governs emissions, {brand.veGovernanceTokenSymbol} decays over time, and
+                gauge intent stays hidden until epoch reveal.
               </p>
             </div>
 
@@ -85,7 +83,7 @@ export default function HomePage() {
             <div className="spotlight-values">
               <strong>{brand.protocol}</strong>
               <p>
-                A confidential liquidity stack with live pool mechanics, epoch settlement, and private debt state in a
+                A confidential liquidity stack with live pool mechanics, ve-style routing, and epoch settlement in a
                 single surface.
               </p>
             </div>
@@ -105,11 +103,6 @@ export default function HomePage() {
       <section className="content-grid">
         <div className="stack">
           <ProtocolTabs />
-        </div>
-
-        <div className="stack stack-side">
-          <ModeStatus />
-          <WalletPanel />
         </div>
       </section>
     </main>

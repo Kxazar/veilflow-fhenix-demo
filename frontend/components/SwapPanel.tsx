@@ -8,17 +8,15 @@ import { areAssetsConfigured, arePoolsConfigured, erc20Abi, liquidityPools, mark
 import { demoAssets, demoPools } from '@/lib/demo-data'
 
 function describeError(error: { shortMessage?: string; message?: string } | null | undefined) {
-  return error?.shortMessage ?? error?.message ?? 'Pool transaction failed'
+  return error?.shortMessage ?? error?.message ?? 'Swap transaction failed'
 }
 
-export function SwapAndLpPanel() {
+export function SwapPanel() {
   const { address } = useAccount()
   const publicClient = usePublicClient()
   const { writeContractAsync, isPending } = useWriteContract()
 
   const [selectedPoolId, setSelectedPoolId] = useState(0)
-  const [liquidityAmount0, setLiquidityAmount0] = useState(50)
-  const [liquidityAmount1, setLiquidityAmount1] = useState(50)
   const [swapAmount, setSwapAmount] = useState(10)
   const [quotedAmountOut, setQuotedAmountOut] = useState<string | null>('11')
   const [status, setStatus] = useState<string | null>(null)
@@ -29,12 +27,11 @@ export function SwapAndLpPanel() {
 
   const livePool = liquidityPools.find((pool) => pool.id === selectedPoolId)
   const liveTokenIn = marketAssets.find((asset) => asset.id === selectedPool.tokenIn)
-  const liveTokenOut = marketAssets.find((asset) => asset.id === selectedPool.tokenOut)
 
   const handleQuote = async () => {
     if (!publicClient || !livePool || !liveTokenIn || !arePoolsConfigured) {
       setQuotedAmountOut(String(Math.max(1, swapAmount - 1)))
-      setStatus('Showing a demo quote. Live routing will activate once pool addresses are configured.')
+      setStatus('Showing a demo quote. Live routing activates once pool addresses are configured.')
       return
     }
 
@@ -47,43 +44,6 @@ export function SwapAndLpPanel() {
       })
       setQuotedAmountOut(amountOut.toString())
       setStatus('Live quote loaded from the selected pool.')
-    } catch (error) {
-      setStatus(describeError(error as { shortMessage?: string; message?: string }))
-    }
-  }
-
-  const handleAddLiquidity = async () => {
-    if (!address || !livePool || !liveTokenIn || !liveTokenOut || !arePoolsConfigured || !areAssetsConfigured) {
-      setStatus('Pool addresses are not live yet, so the LP tab stays in preview mode.')
-      return
-    }
-
-    try {
-      setStatus(`Approving ${tokenIn.name} for the pool...`)
-      await writeContractAsync({
-        address: liveTokenIn.address,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [livePool.address, BigInt(liquidityAmount0)],
-      })
-
-      setStatus(`Approving ${tokenOut.name} for the pool...`)
-      await writeContractAsync({
-        address: liveTokenOut.address,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [livePool.address, BigInt(liquidityAmount1)],
-      })
-
-      setStatus('Submitting add liquidity transaction...')
-      await writeContractAsync({
-        address: livePool.address,
-        abi: poolAbi,
-        functionName: 'addLiquidity',
-        args: [BigInt(liquidityAmount0), BigInt(liquidityAmount1)],
-      })
-
-      setStatus(`Liquidity added. The resulting LP token can be used as collateral in ${brand.stableTokenSymbol} markets if the pair is whitelisted.`)
     } catch (error) {
       setStatus(describeError(error as { shortMessage?: string; message?: string }))
     }
@@ -122,15 +82,15 @@ export function SwapAndLpPanel() {
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Swap & LP</p>
-          <h3>Route into the pools, then mint LP as collateral inventory</h3>
+          <p className="eyebrow">Swap rail</p>
+          <h3>Route through active markets without leaving the control surface</h3>
         </div>
       </div>
 
       <div className="gauge-list">
         {demoPools.map((pool) => (
           <label className={`gauge-card ${selectedPoolId === pool.id ? 'gauge-card-active' : ''}`} key={pool.id}>
-            <input checked={selectedPoolId === pool.id} name="pool" onChange={() => setSelectedPoolId(pool.id)} type="radio" />
+            <input checked={selectedPoolId === pool.id} name="swap-pool" onChange={() => setSelectedPoolId(pool.id)} type="radio" />
             <div>
               <strong>{pool.name}</strong>
               <p>{pool.symbol}</p>
@@ -140,24 +100,22 @@ export function SwapAndLpPanel() {
             </div>
             <div className="gauge-metrics">
               <span>{pool.userLpBalance} LP held</span>
-              <span>{pool.rewardInventory} {brand.governanceTokenSymbol} epoch flow</span>
+              <span>{pool.rewardInventory} {brand.governanceTokenSymbol} / week</span>
             </div>
           </label>
         ))}
       </div>
 
-      <div className="toolbar toolbar-triple">
-        <label className="field field-inline">
-          <span>{tokenIn.name} for LP</span>
-          <input className="input input-compact" min={1} onChange={(e) => setLiquidityAmount0(Number(e.target.value))} type="number" value={liquidityAmount0} />
-        </label>
-        <label className="field field-inline">
-          <span>{tokenOut.name} for LP</span>
-          <input className="input input-compact" min={1} onChange={(e) => setLiquidityAmount1(Number(e.target.value))} type="number" value={liquidityAmount1} />
-        </label>
+      <div className="toolbar">
         <label className="field field-inline">
           <span>{tokenIn.name} to swap</span>
-          <input className="input input-compact" min={1} onChange={(e) => setSwapAmount(Number(e.target.value))} type="number" value={swapAmount} />
+          <input
+            className="input input-compact"
+            min={1}
+            onChange={(event) => setSwapAmount(Number(event.target.value))}
+            type="number"
+            value={swapAmount}
+          />
         </label>
       </div>
 
@@ -165,11 +123,8 @@ export function SwapAndLpPanel() {
         <button className="button button-secondary" onClick={() => void handleQuote()}>
           Quote swap
         </button>
-        <button className="button" disabled={isPending} onClick={() => void handleAddLiquidity()}>
-          {isPending ? 'Pending...' : 'Add liquidity'}
-        </button>
-        <button className="button button-secondary" disabled={isPending} onClick={() => void handleSwap()}>
-          Swap assets
+        <button className="button" disabled={isPending} onClick={() => void handleSwap()}>
+          {isPending ? 'Pending...' : 'Swap assets'}
         </button>
       </div>
 
@@ -185,14 +140,14 @@ export function SwapAndLpPanel() {
           <strong>{quotedAmountOut ?? 'hidden'} out</strong>
         </div>
         <div>
-          <span className="muted">Collateral path</span>
-          <strong>{selectedPool.symbol} feeds {brand.stableTokenSymbol}</strong>
+          <span className="muted">Incentive lane</span>
+          <strong>{selectedPool.rewardInventory} {brand.governanceTokenSymbol} / week</strong>
         </div>
       </div>
 
       <p className="supporting-copy">
-        Pools are standard constant-product markets in this demo. After adding liquidity, the minted LP token becomes a
-        candidate input for the stable controller if the pair has been whitelisted.
+        Quotes come straight from the selected pool when live addresses are configured. In demo mode the same panel
+        still previews the route and the reward lane attached to that market.
       </p>
 
       {status ? <p className="supporting-copy">{status}</p> : null}

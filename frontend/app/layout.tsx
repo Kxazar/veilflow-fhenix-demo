@@ -8,7 +8,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: brand.protocol,
-  description: `${brand.protocol} is a confidential ve-tokenomics, swap, LP, and shielded stablecoin demo built on Fhenix CoFHE.`,
+  description: `${brand.protocol} is a confidential ve-tokenomics, swap, LP, and shadow gauge demo built on Fhenix CoFHE.`,
   icons: {
     icon: '/icon.svg',
     shortcut: '/icon.svg',

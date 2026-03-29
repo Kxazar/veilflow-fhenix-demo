@@ -94,8 +94,6 @@ export const isLiveConfigured =
   appMode === 'live' &&
   contracts.gaugeController !== zeroAddress &&
   contracts.voteToken !== zeroAddress &&
-  contracts.stableController !== zeroAddress &&
-  contracts.stableToken !== zeroAddress &&
   Boolean(fheEndpoints.coFheUrl) &&
   Boolean(fheEndpoints.verifierUrl) &&
   Boolean(fheEndpoints.thresholdNetworkUrl)

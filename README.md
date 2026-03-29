@@ -1,15 +1,14 @@
 # Noctra Arc: Fhenix Confidential DeFi Demo
 
-This repository started from the official `cofhe-hardhat-starter` and now contains a larger Fhenix showcase:
+This repository started from the official `cofhe-hardhat-starter` and now contains a larger Fhenix showcase focused on a tighter surface:
 
 - confidential private voting
 - a ve-style gauge controller inspired by Curve and Aerodrome
-- wrapped encrypted NTRA balances adapted from the FHERC20 patterns in `marronjo/fhe-hook-template`
+- wrapped encrypted NTRA balances for private operator flows
 - an on-chain NTRA faucet that dispenses 100 tokens once per 24 hours per wallet
-- market asset faucets for `fhETH`, `fhUSDC`, `wBTC`, and `sDAI`
 - constant-product swap pools with LP minting
-- a shielded LP-backed stablecoin controller with 160% minimum collateralization
-- a Next.js interface for demo mode now and live Fhenix mode later
+- a Next.js interface with dedicated tabs for faucet, swap, LP, veNTRA, and shadow gauges
+- demo mode now and live Fhenix mode later
 
 ## What is included
 
@@ -21,7 +20,7 @@ A minimal CoFHE voting primitive that keeps tallies hidden until reveal.
 
 A ve-tokenomics module where:
 
-- users lock `VEIL`
+- users lock `NTRA`
 - voting power decays linearly with time
 - every vote is submitted as encrypted `InEuint8`
 - all gauge tallies are updated each vote with `FHE.select(...)`
@@ -44,48 +43,26 @@ An on-chain faucet for `NTRA` where:
 - claims are limited to one request every `24 hours`
 - cooldown enforcement lives in the contract, not in the frontend
 
-The same faucet contract is also reused for the market assets so the frontend can bootstrap the full path from swap to LP to vhUSD.
-
 ### `VeilLiquidityPool`
 
 A minimal CPMM rail where:
 
 - supported market pairs can be swapped directly
 - LP shares are minted on-chain when liquidity is added
-- selected LP pairs are whitelisted as vhUSD collateral
 - gauge rewards can be pushed to pool recipient addresses at epoch settlement
-
-### `ConfidentialStableController` + `VeilStablecoin`
-
-A stablecoin rail where:
-
-- only approved LP pairs can be used as collateral
-- collateral values are tracked with configurable prices
-- users submit encrypted desired mint amounts
-- the controller clips the encrypted request to the safe headroom
-- `nUSD` debt and `nUSD` balances remain encrypted until the holder decrypts them with a permit
 
 ### `frontend/`
 
 A Next.js app called `Noctra Arc` that includes:
 
-- wallet + permit rail
-- ve lock planner
-- confidential gauge voting console
-- encrypted vhUSD mint panel
-- VEIL faucet tab
-- market asset faucet coverage
-- swap and LP tab
+- a compact architecture overview at the top of the page
+- a dedicated NTRA faucet tab
+- a dedicated swap tab
+- a dedicated LP tab
+- a veNTRA planner and encrypted NTRA wrap flow
+- a confidential shadow gauge console
 - demo mode by default
 - live-ready mode via env vars for RPC, CoFHE endpoints, and deployed contract addresses
-
-## Tech sources used
-
-- `marronjo/fhe-hook-template`
-- `FhenixProtocol/poc-shielded-stablecoin`
-- `FhenixProtocol/encrypted-secret-santa`
-
-The contracts and frontend patterns were adapted to the current toolchain version that actually works in this starter environment.
 
 ## Prerequisites
 
@@ -123,13 +100,7 @@ corepack pnpm demo:gauges
 corepack pnpm test:gauges
 ```
 
-### Shielded stablecoin
-
-```bash
-corepack pnpm test:stable
-```
-
-### VEIL faucet
+### NTRA faucet
 
 ```bash
 corepack pnpm test:faucet
@@ -143,7 +114,7 @@ corepack pnpm test:pools
 
 ### Wallet flow verification
 
-Run the full faucet -> lock -> wrap -> hidden vote -> swap -> LP -> vhUSD -> epoch settlement flow with a provided private key:
+Run the full faucet -> lock -> wrap -> hidden vote -> swap -> LP -> epoch settlement flow with a provided private key:
 
 ```bash
 WALLET_PRIVATE_KEY=... corepack pnpm demo:wallet-check
@@ -151,7 +122,7 @@ WALLET_PRIVATE_KEY=... corepack pnpm demo:wallet-check
 
 ### Full-stack deployment
 
-Deploy the full VeilFlow stack and print frontend env vars:
+Deploy the full Noctra Arc stack and print frontend env vars:
 
 ```bash
 corepack pnpm deploy:veilflow
@@ -183,8 +154,9 @@ Copy `frontend/.env.example` into your local env file and provide:
 - RPC URL
 - CoFHE endpoint URLs
 - deployed contract addresses
-- faucet address
-- approved collateral token addresses
+- NTRA faucet address
+- pool addresses
+- market asset token addresses
 
 Then switch:
 
@@ -198,8 +170,6 @@ NEXT_PUBLIC_APP_MODE=live
 - `contracts/ConfidentialGaugeController.sol`
 - `contracts/VeilToken.sol`
 - `contracts/VeilFaucet.sol`
-- `contracts/VeilStablecoin.sol`
-- `contracts/ConfidentialStableController.sol`
 - `contracts/MockAssetToken.sol`
 - `contracts/VeilLiquidityPool.sol`
 - `scripts/privateVotingDemo.ts`
@@ -207,7 +177,6 @@ NEXT_PUBLIC_APP_MODE=live
 - `scripts/deployVeilFlowStack.ts`
 - `scripts/verifyWalletProtocolFlow.ts`
 - `test/ConfidentialGaugeController.test.ts`
-- `test/ConfidentialStableController.test.ts`
 - `test/VeilFaucet.test.ts`
 - `test/VeilLiquidityPool.test.ts`
 - `frontend/app/page.tsx`

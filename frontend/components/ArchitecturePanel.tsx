@@ -1,130 +1,108 @@
 'use client'
 
 import { brand } from '@/lib/brand'
-import { demoGauges, demoPools, protocolHighlights } from '@/lib/demo-data'
+import { demoEpoch, demoGauges, demoPools } from '@/lib/demo-data'
 
-const architectureLayers = [
+const architectureSummary = [
   {
-    title: `1. ${brand.veGovernanceTokenSymbol} control layer`,
-    text: `${brand.governanceTokenSymbol} is locked into the gauge controller to produce linear time-decaying voting power. This keeps the same strategic duration game that Curve and Aerodrome users know, but frames it inside a more tactical credit stack.`,
+    title: `${brand.governanceTokenSymbol} source`,
+    text: `A single on-chain faucet seeds ${brand.governanceTokenSymbol}, then the same token powers locks, wrapped balances, and weekly emissions.`,
   },
   {
-    title: '2. confidential gauge layer',
-    text: 'Users generate a CoFHE permit, encrypt the chosen gauge index locally, and submit a ciphertext handle. The contract then updates every gauge weight on each vote so observers cannot infer the selected pool from state transitions.',
+    title: 'Pool engine',
+    text: 'Each market is a live constant-product pool with direct swaps and LP minting, so the surface is not a static vote mockup.',
   },
   {
-    title: '3. shielded credit layer',
-    text: `Selected LP tokens enter the stable controller as transparent collateral, but the desired ${brand.stableTokenSymbol} mint amount, the resulting debt, and the user balance stay encrypted. The controller clips every request to the remaining 160% safe headroom.`,
+    title: 'Shadow settlement',
+    text: 'Gauge votes stay encrypted during the epoch, then aggregate weights settle into real weekly NTRA emissions after reveal.',
   },
 ]
 
-const architectureFlows = [
-  'Create a permit once, then reuse it to submit encrypted votes and later decrypt your own outputs.',
-  `Wrap ${brand.governanceTokenSymbol} into the encrypted balance rail when the holder wants shielded treasury or position management.`,
-  'Reveal epoch weights only after the voting window closes, preserving price discovery until emissions are set.',
-  'Let users discover mint capacity from LP collateral without broadcasting the exact size of their debt.',
-]
-
-const referenceRepos = [
+const architectureSteps = [
   {
-    label: 'marronjo/fhe-hook-template',
-    href: 'https://github.com/marronjo/fhe-hook-template',
+    title: 'Faucet',
+    text: `Bootstrap a wallet with ${brand.governanceTokenSymbol} so a new account can enter the loop immediately.`,
   },
   {
-    label: 'FhenixProtocol/poc-shielded-stablecoin',
-    href: 'https://github.com/FhenixProtocol/poc-shielded-stablecoin',
+    title: 'Swap',
+    text: 'Route into the active markets and build the inventory needed for the pool you want to support.',
   },
   {
-    label: 'FhenixProtocol/encrypted-secret-santa',
-    href: 'https://github.com/FhenixProtocol/encrypted-secret-santa',
+    title: 'LP',
+    text: 'Add liquidity on-chain and mint LP shares that will later compete for weekly emissions.',
+  },
+  {
+    title: brand.veGovernanceTokenSymbol,
+    text: `Lock ${brand.governanceTokenSymbol}, shape time-decaying voting power, and optionally wrap balances into the encrypted rail.`,
+  },
+  {
+    title: 'Shadow Gauges',
+    text: 'Encrypt pool choice locally, submit the hidden vote on-chain, and reveal aggregate weights only after epoch close.',
   },
 ]
 
 export function ArchitecturePanel() {
   return (
-    <section className="panel architecture-top">
-      <div className="panel-header">
+    <section className="panel architecture-panel">
+      <div className="panel-header architecture-header">
         <div>
           <p className="eyebrow">Architecture</p>
-          <h3>{brand.protocol}: governance, liquidity, and private credit in one surface</h3>
+          <h3>{brand.protocol}: one compact loop from token source to hidden emissions</h3>
         </div>
         <p className="protocol-header-copy">
-          {brand.protocol} combines an emissions game, actual swap and LP primitives, and a shielded stablecoin path that turns
-          selected LP positions into confidential credit.
+          {brand.protocol} is organized around a single readable cycle: seed {brand.governanceTokenSymbol}, route into
+          pools, mint LP, lock into {brand.veGovernanceTokenSymbol}, and steer weekly emissions with encrypted gauge
+          voting.
         </p>
       </div>
 
-      <div className="overview-grid">
-        <article className="overview-card">
-          <span className="eyebrow">governance rail</span>
-          <p>
-            Users claim {brand.governanceTokenSymbol}, lock it into {brand.veGovernanceTokenSymbol}, and steer weekly emissions with encrypted gauge selection.
-          </p>
-        </article>
-        <article className="overview-card">
-          <span className="eyebrow">liquidity rail</span>
-          <p>
-            Supported pools are not placeholders: they price swaps, mint LP, and receive real {brand.governanceTokenSymbol} emissions after settlement.
-          </p>
-        </article>
-        <article className="overview-card">
-          <span className="eyebrow">private credit rail</span>
-          <p>
-            LP collateral remains public, while requested {brand.stableTokenSymbol} mint size, resulting debt, and shielded balances stay encrypted.
-          </p>
-        </article>
-        <article className="overview-card">
-          <span className="eyebrow">epoch settlement</span>
-          <p>
-            The controller reveals aggregate weights, settles {brand.governanceTokenSymbol} with a floor for each active gauge, and pushes rewards on-chain.
-          </p>
-        </article>
-      </div>
-
-      <div className="architecture-grid">
-        {architectureLayers.map((item) => (
-          <article className="architecture-card" key={item.title}>
-            <strong>{item.title}</strong>
+      <div className="architecture-summary">
+        {architectureSummary.map((item) => (
+          <article className="overview-card architecture-summary-card" key={item.title}>
+            <span className="eyebrow">{item.title}</span>
             <p>{item.text}</p>
           </article>
         ))}
-
-        {protocolHighlights.map((item) => (
-          <article className="architecture-card" key={item}>
-            <p>{item}</p>
-          </article>
-        ))}
       </div>
 
-      <div className="overview-band">
+      <div className="architecture-track">
+        <div className="architecture-track-head">
+          <div>
+            <span className="eyebrow">Control flow</span>
+            <strong>faucet -&gt; swap -&gt; LP -&gt; {brand.veGovernanceTokenSymbol} -&gt; shadow gauges</strong>
+          </div>
+          <p className="supporting-copy">
+            The UI mirrors this order so the protocol reads as one continuous operating loop instead of scattered
+            feature boxes.
+          </p>
+        </div>
+
+        <div className="architecture-steps">
+          {architectureSteps.map((item, index) => (
+            <article className="architecture-step" key={item.title}>
+              <span className="architecture-step-index">{String(index + 1).padStart(2, '0')}</span>
+              <strong>{item.title}</strong>
+              <p>{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="metric-band architecture-metrics">
         <div>
           <span className="muted">Active markets</span>
           <strong>{demoGauges.map((gauge) => gauge.name).join(' / ')}</strong>
         </div>
         <div>
-          <span className="muted">LP path</span>
-          <strong>{demoPools.map((pool) => `${pool.symbol}: ${pool.userLpBalance}`).join(' / ')}</strong>
+          <span className="muted">Hidden votes this epoch</span>
+          <strong>{demoEpoch.hiddenVotes} encrypted submissions</strong>
         </div>
         <div>
-          <span className="muted">Emission model</span>
-          <strong>{`every active gauge keeps a non-zero ${brand.governanceTokenSymbol} weekly flow`}</strong>
+          <span className="muted">Weekly distribution</span>
+          <strong>
+            {demoEpoch.weeklyEmission} {brand.governanceTokenSymbol} across {demoPools.length} active lanes
+          </strong>
         </div>
-      </div>
-
-      <div className="flow-list">
-        {architectureFlows.map((item) => (
-          <article className="flow-card" key={item}>
-            <p>{item}</p>
-          </article>
-        ))}
-      </div>
-
-      <div className="reference-strip">
-        {referenceRepos.map((repo) => (
-          <a className="reference-link" href={repo.href} key={repo.href} rel="noreferrer" target="_blank">
-            {repo.label}
-          </a>
-        ))}
       </div>
     </section>
   )

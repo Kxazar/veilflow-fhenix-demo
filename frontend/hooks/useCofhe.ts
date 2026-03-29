@@ -188,7 +188,7 @@ export function useCofhe() {
     const payload = result.data[0] as EncryptedInput
     setPreview({
       kind: 'mint',
-      label: `${amount.toString()} vhUSD`,
+      label: `${amount.toString()} encrypted amount`,
       ctHash: payload.ctHash.toString(),
       securityZone: payload.securityZone,
       utype: payload.utype,

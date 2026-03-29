@@ -83,8 +83,6 @@ async function main() {
     `NEXT_PUBLIC_THRESHOLD_URL=${getFhenixEnv(networkName) === 'TESTNET' ? 'https://testnet-cofhe-tn.fhenix.zone' : ''}`,
     `NEXT_PUBLIC_GAUGE_CONTROLLER_ADDRESS=${deployment.contracts.gaugeController}`,
     `NEXT_PUBLIC_VEIL_TOKEN_ADDRESS=${deployment.contracts.voteToken}`,
-    `NEXT_PUBLIC_STABLE_CONTROLLER_ADDRESS=${deployment.contracts.stableController}`,
-    `NEXT_PUBLIC_STABLE_TOKEN_ADDRESS=${deployment.contracts.stableToken}`,
     `NEXT_PUBLIC_VEIL_FAUCET_ADDRESS=${deployment.contracts.voteFaucet}`,
     `NEXT_PUBLIC_POOL_0_NAME=${deployment.pools[0].name}`,
     `NEXT_PUBLIC_POOL_0_ADDRESS=${deployment.pools[0].pool}`,
@@ -94,26 +92,18 @@ async function main() {
     `NEXT_PUBLIC_POOL_2_ADDRESS=${deployment.pools[2].pool}`,
     `NEXT_PUBLIC_ASSET_0_NAME=${deployment.assets[0].symbol}`,
     `NEXT_PUBLIC_ASSET_0_ADDRESS=${deployment.assets[0].token}`,
-    `NEXT_PUBLIC_ASSET_0_FAUCET_ADDRESS=${deployment.assets[0].faucet}`,
     `NEXT_PUBLIC_ASSET_1_NAME=${deployment.assets[1].symbol}`,
     `NEXT_PUBLIC_ASSET_1_ADDRESS=${deployment.assets[1].token}`,
-    `NEXT_PUBLIC_ASSET_1_FAUCET_ADDRESS=${deployment.assets[1].faucet}`,
     `NEXT_PUBLIC_ASSET_2_NAME=${deployment.assets[2].symbol}`,
     `NEXT_PUBLIC_ASSET_2_ADDRESS=${deployment.assets[2].token}`,
-    `NEXT_PUBLIC_ASSET_2_FAUCET_ADDRESS=${deployment.assets[2].faucet}`,
     `NEXT_PUBLIC_ASSET_3_NAME=${deployment.assets[3].symbol}`,
     `NEXT_PUBLIC_ASSET_3_ADDRESS=${deployment.assets[3].token}`,
-    `NEXT_PUBLIC_ASSET_3_FAUCET_ADDRESS=${deployment.assets[3].faucet}`,
-    `NEXT_PUBLIC_COLLATERAL_0_NAME=${deployment.pools[0].name} LP`,
-    `NEXT_PUBLIC_COLLATERAL_0_ADDRESS=${deployment.pools[0].pool}`,
-    `NEXT_PUBLIC_COLLATERAL_1_NAME=${deployment.pools[2].name} LP`,
-    `NEXT_PUBLIC_COLLATERAL_1_ADDRESS=${deployment.pools[2].pool}`,
   ]
 
   const outputDir = path.join(process.cwd(), 'deployments')
   mkdirSync(outputDir, { recursive: true })
 
-  const outputPath = path.join(outputDir, `veilflow-${networkName}.json`)
+  const outputPath = path.join(outputDir, `noctra-arc-${networkName}.json`)
   writeFileSync(
     outputPath,
     JSON.stringify(
@@ -126,7 +116,7 @@ async function main() {
     ),
   )
 
-  console.log(`VeilFlow stack deployed on ${networkName}`)
+  console.log(`Noctra Arc stack deployed on ${networkName}`)
   console.log(`Deployment manifest: ${outputPath}`)
   console.log('')
   console.log(envLines.join('\n'))

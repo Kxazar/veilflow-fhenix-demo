@@ -105,6 +105,6 @@ export const demoStablePosition = {
 export const protocolHighlights = [
   've-style lockups create time-decaying voting power similar to Curve and Aerodrome.',
   'Gauge votes stay encrypted during the epoch, so routing intent is hidden until reveal.',
-  `Selected LP pairs can back ${brand.stableTokenSymbol} at a minimum 160% collateral ratio.`,
-  `Both ${brand.governanceTokenSymbol} and ${brand.stableTokenSymbol} support wrapped encrypted balances for shielded treasury and user flows.`,
+  'Active pools execute swaps on-chain and mint LP shares that later compete for emissions.',
+  `Wrapped ${brand.governanceTokenSymbol} keeps a private balance lane available for shielded treasury and operator flows.`,
 ]

@@ -1,18 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAccount, useWriteContract } from 'wagmi'
 
 import { brand } from '@/lib/brand'
-import { contracts, faucetAbi, isFaucetConfigured, marketAssets } from '@/lib/contracts'
-import { demoAssets } from '@/lib/demo-data'
-
-type FaucetItem = {
-  id: string
-  title: string
-  amount: number
-  faucetAddress: `0x${string}` | null
-}
+import { contracts, faucetAbi, isFaucetConfigured } from '@/lib/contracts'
 
 function describeError(error: { shortMessage?: string; message?: string } | null | undefined) {
   return error?.shortMessage ?? error?.message ?? 'Faucet transaction failed'
@@ -21,49 +13,31 @@ function describeError(error: { shortMessage?: string; message?: string } | null
 export function FaucetPanel() {
   const { address } = useAccount()
   const { writeContractAsync, isPending } = useWriteContract()
-
-  const [selectedFaucetId, setSelectedFaucetId] = useState<string>(brand.governanceTokenSymbol)
   const [status, setStatus] = useState<string | null>(null)
+  const faucetAmount = 100
 
-  const faucets = useMemo<FaucetItem[]>(
-    () => [
-      {
-        id: brand.governanceTokenSymbol,
-        title: brand.governanceTokenSymbol,
-        amount: 100,
-        faucetAddress: isFaucetConfigured ? contracts.faucet : null,
-      },
-      ...demoAssets.map((asset, index) => ({
-        id: asset.id,
-        title: asset.name,
-        amount: asset.faucetAmount,
-        faucetAddress:
-          marketAssets[index] && marketAssets[index].faucet !== '0x0000000000000000000000000000000000000000'
-            ? marketAssets[index].faucet
-            : null,
-      })),
-    ],
-    [],
-  )
-
-  const selectedFaucet = faucets.find((item) => item.id === selectedFaucetId) ?? faucets[0]
+  useEffect(() => {
+    if (!status && !isFaucetConfigured) {
+      setStatus(`The ${brand.governanceTokenSymbol} faucet enters live mode once its deployed contract address is configured.`)
+    }
+  }, [status])
 
   const handleClaim = async () => {
-    if (!selectedFaucet.faucetAddress) {
-      setStatus(`${selectedFaucet.title} faucet is wired in the UI, but its live contract address has not been configured yet.`)
+    if (!isFaucetConfigured) {
+      setStatus(`The ${brand.governanceTokenSymbol} faucet enters live mode once its deployed contract address is configured.`)
       return
     }
 
     try {
-      setStatus(`Submitting ${selectedFaucet.title} faucet claim...`)
+      setStatus(`Submitting ${brand.governanceTokenSymbol} faucet claim...`)
       await writeContractAsync({
-        address: selectedFaucet.faucetAddress,
+        address: contracts.faucet,
         abi: faucetAbi,
         functionName: 'claim',
         args: [],
       })
 
-      setStatus(`Claim sent. ${selectedFaucet.amount} ${selectedFaucet.title} can be claimed once every 24 hours per wallet.`)
+      setStatus(`Claim sent. ${faucetAmount} ${brand.governanceTokenSymbol} can be claimed once every 24 hours per wallet.`)
     } catch (error) {
       setStatus(describeError(error as { shortMessage?: string; message?: string }))
     }
@@ -74,31 +48,32 @@ export function FaucetPanel() {
       <div className="panel-header">
         <div>
           <p className="eyebrow">Bootstrap rail</p>
-          <h3>Seed {brand.governanceTokenSymbol} and market assets</h3>
+          <h3>Seed a new wallet with {brand.governanceTokenSymbol}</h3>
         </div>
       </div>
 
       <div className="gauge-list">
-        {faucets.map((faucet) => (
-          <label className={`gauge-card ${selectedFaucetId === faucet.id ? 'gauge-card-active' : ''}`} key={faucet.id}>
-            <input checked={selectedFaucetId === faucet.id} name="faucet" onChange={() => setSelectedFaucetId(faucet.id)} type="radio" />
-            <div>
-              <strong>{faucet.title}</strong>
-              <p>{faucet.amount} tokens per claim</p>
-              <span>one claim every 24 hours per wallet</span>
-            </div>
-          </label>
-        ))}
+        <article className="gauge-card gauge-card-active">
+          <div>
+            <strong>{brand.governanceTokenSymbol}</strong>
+            <p>{faucetAmount} tokens per claim</p>
+            <span>one request every 24 hours, enforced by the contract</span>
+          </div>
+          <div className="gauge-metrics">
+            <span>governance inventory</span>
+            <span>bootstrap lane</span>
+          </div>
+        </article>
       </div>
 
       <div className="metric-band">
         <div>
-          <span className="muted">Selected asset</span>
-          <strong>{selectedFaucet.title}</strong>
+          <span className="muted">Asset</span>
+          <strong>{brand.governanceTokenSymbol}</strong>
         </div>
         <div>
           <span className="muted">Per request</span>
-          <strong>{selectedFaucet.amount}</strong>
+          <strong>{faucetAmount}</strong>
         </div>
         <div>
           <span className="muted">Wallet status</span>
@@ -108,13 +83,13 @@ export function FaucetPanel() {
 
       <div className="button-row">
         <button className="button" disabled={!address || isPending} onClick={() => void handleClaim()}>
-          {isPending ? 'Pending...' : `Claim ${selectedFaucet.title}`}
+          {isPending ? 'Pending...' : `Claim ${brand.governanceTokenSymbol}`}
         </button>
       </div>
 
       <p className="supporting-copy">
-        {brand.governanceTokenSymbol} and market faucets are rate-limited in the contracts themselves. That means the
-        website cannot bypass the one-wallet-per-24-hour rule even if someone replays the UI.
+        Only {brand.governanceTokenSymbol} is exposed through the public faucet. The cooldown lives inside the
+        contract, so the site cannot bypass the one-wallet-per-24-hour rule even if the UI is replayed.
       </p>
 
       {status ? <p className="supporting-copy">{status}</p> : null}
