@@ -10,7 +10,7 @@ export const demoGauges = [
     name: 'ETH / fhUSDC',
     pairLabel: 'volatile flagship pool',
     revealedWeight: 1_100,
-    emissionShare: 10_096,
+    emissionShare: 8_974,
     angle: 'high-beta route for directional liquidity',
   },
   {
@@ -18,16 +18,59 @@ export const demoGauges = [
     name: 'wBTC / fhETH',
     pairLabel: 'blue-chip reserve route',
     revealedWeight: 0,
-    emissionShare: 0,
-    angle: 'treasury-grade pair kept dormant this epoch',
+    emissionShare: 625,
+    angle: 'minimum strategic flow keeps reserve markets alive even in a quiet epoch',
   },
   {
     id: 2,
     name: 'sDAI / fhUSDC',
     pairLabel: 'stable carry corridor',
     revealedWeight: 300,
-    emissionShare: 2_403,
+    emissionShare: 2_901,
     angle: 'defensive pool that still attracts hidden votes',
+  },
+]
+
+export const demoAssets = [
+  { id: 'fhETH', name: 'fhETH', faucetAmount: 100, walletBalance: 280 },
+  { id: 'fhUSDC', name: 'fhUSDC', faucetAmount: 100, walletBalance: 320 },
+  { id: 'wBTC', name: 'wBTC', faucetAmount: 100, walletBalance: 140 },
+  { id: 'sDAI', name: 'sDAI', faucetAmount: 100, walletBalance: 210 },
+]
+
+export const demoPools = [
+  {
+    id: 0,
+    name: 'ETH / fhUSDC',
+    symbol: 'vLP-ETHUSDC',
+    tokenIn: 'fhETH',
+    tokenOut: 'fhUSDC',
+    reserve0: 1000,
+    reserve1: 1200,
+    userLpBalance: 90,
+    rewardInventory: 8_974,
+  },
+  {
+    id: 1,
+    name: 'wBTC / fhETH',
+    symbol: 'vLP-WBTCFHETH',
+    tokenIn: 'wBTC',
+    tokenOut: 'fhETH',
+    reserve0: 800,
+    reserve1: 900,
+    userLpBalance: 45,
+    rewardInventory: 625,
+  },
+  {
+    id: 2,
+    name: 'sDAI / fhUSDC',
+    symbol: 'vLP-SDAIUSDC',
+    tokenIn: 'sDAI',
+    tokenOut: 'fhUSDC',
+    reserve0: 1100,
+    reserve1: 1100,
+    userLpBalance: 70,
+    rewardInventory: 2_901,
   },
 ]
 

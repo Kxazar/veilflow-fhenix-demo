@@ -26,6 +26,51 @@ export const contracts = {
   faucet: (process.env.NEXT_PUBLIC_VEIL_FAUCET_ADDRESS ?? zeroAddress) as Address,
 }
 
+export const marketAssets = [
+  {
+    id: 'fhETH',
+    name: process.env.NEXT_PUBLIC_ASSET_0_NAME ?? 'fhETH',
+    address: (process.env.NEXT_PUBLIC_ASSET_0_ADDRESS ?? zeroAddress) as Address,
+    faucet: (process.env.NEXT_PUBLIC_ASSET_0_FAUCET_ADDRESS ?? zeroAddress) as Address,
+  },
+  {
+    id: 'fhUSDC',
+    name: process.env.NEXT_PUBLIC_ASSET_1_NAME ?? 'fhUSDC',
+    address: (process.env.NEXT_PUBLIC_ASSET_1_ADDRESS ?? zeroAddress) as Address,
+    faucet: (process.env.NEXT_PUBLIC_ASSET_1_FAUCET_ADDRESS ?? zeroAddress) as Address,
+  },
+  {
+    id: 'wBTC',
+    name: process.env.NEXT_PUBLIC_ASSET_2_NAME ?? 'wBTC',
+    address: (process.env.NEXT_PUBLIC_ASSET_2_ADDRESS ?? zeroAddress) as Address,
+    faucet: (process.env.NEXT_PUBLIC_ASSET_2_FAUCET_ADDRESS ?? zeroAddress) as Address,
+  },
+  {
+    id: 'sDAI',
+    name: process.env.NEXT_PUBLIC_ASSET_3_NAME ?? 'sDAI',
+    address: (process.env.NEXT_PUBLIC_ASSET_3_ADDRESS ?? zeroAddress) as Address,
+    faucet: (process.env.NEXT_PUBLIC_ASSET_3_FAUCET_ADDRESS ?? zeroAddress) as Address,
+  },
+]
+
+export const liquidityPools = [
+  {
+    id: 0,
+    name: process.env.NEXT_PUBLIC_POOL_0_NAME ?? 'ETH / fhUSDC',
+    address: (process.env.NEXT_PUBLIC_POOL_0_ADDRESS ?? zeroAddress) as Address,
+  },
+  {
+    id: 1,
+    name: process.env.NEXT_PUBLIC_POOL_1_NAME ?? 'wBTC / fhETH',
+    address: (process.env.NEXT_PUBLIC_POOL_1_ADDRESS ?? zeroAddress) as Address,
+  },
+  {
+    id: 2,
+    name: process.env.NEXT_PUBLIC_POOL_2_NAME ?? 'sDAI / fhUSDC',
+    address: (process.env.NEXT_PUBLIC_POOL_2_ADDRESS ?? zeroAddress) as Address,
+  },
+]
+
 export const collateralTokens = [
   {
     id: 0,
@@ -56,6 +101,9 @@ export const isLiveConfigured =
   Boolean(fheEndpoints.thresholdNetworkUrl)
 
 export const isFaucetConfigured = contracts.faucet !== zeroAddress
+export const isVoteTokenConfigured = contracts.voteToken !== zeroAddress
+export const arePoolsConfigured = liquidityPools.some((pool) => pool.address !== zeroAddress)
+export const areAssetsConfigured = marketAssets.some((asset) => asset.address !== zeroAddress)
 
 export const gaugeControllerAbi = [
   {
@@ -231,5 +279,56 @@ export const faucetAbi = [
     name: 'getNextClaimAt',
     inputs: [{ name: 'account', type: 'address' }],
     outputs: [{ name: '', type: 'uint256' }],
+  },
+] as const
+
+export const poolAbi = [
+  {
+    type: 'function',
+    stateMutability: 'nonpayable',
+    name: 'addLiquidity',
+    inputs: [
+      { name: 'amount0', type: 'uint256' },
+      { name: 'amount1', type: 'uint256' },
+    ],
+    outputs: [{ name: 'liquidity', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    stateMutability: 'nonpayable',
+    name: 'swap',
+    inputs: [
+      { name: 'tokenIn', type: 'address' },
+      { name: 'amountIn', type: 'uint256' },
+      { name: 'minAmountOut', type: 'uint256' },
+    ],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    stateMutability: 'view',
+    name: 'balanceOf',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    stateMutability: 'view',
+    name: 'getAmountOut',
+    inputs: [
+      { name: 'tokenIn', type: 'address' },
+      { name: 'amountIn', type: 'uint256' },
+    ],
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    stateMutability: 'view',
+    name: 'getReserves',
+    inputs: [],
+    outputs: [
+      { name: '', type: 'uint256' },
+      { name: '', type: 'uint256' },
+    ],
   },
 ] as const

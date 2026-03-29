@@ -3,180 +3,203 @@ import { Wallet } from 'ethers'
 import { cofhejs, Encryptable, FheTypes } from 'cofhejs/node'
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers'
 
+import { deployVeilFlowStack } from './veilflowStack'
+
 async function initializeHardhatSigner(signer: HardhatEthersSigner) {
-	await hre.cofhe.expectResultSuccess(hre.cofhe.initializeWithHardhatSigner(signer))
+  await hre.cofhe.expectResultSuccess(hre.cofhe.initializeWithHardhatSigner(signer))
 }
 
 async function initializeEthersWallet(wallet: Wallet, zkvSigner: HardhatEthersSigner) {
-	await hre.cofhe.expectResultSuccess(
-		cofhejs.initializeWithEthers({
-			ethersProvider: hre.ethers.provider,
-			ethersSigner: wallet,
-			environment: 'MOCK',
-			mockConfig: {
-				zkvSigner,
-				decryptDelay: 0,
-			},
-		}),
-	)
+  await hre.cofhe.expectResultSuccess(
+    cofhejs.initializeWithEthers({
+      ethersProvider: hre.ethers.provider,
+      ethersSigner: wallet,
+      environment: 'MOCK',
+      mockConfig: {
+        zkvSigner,
+        decryptDelay: 0,
+      },
+    }),
+  )
 }
 
 async function encryptUint8(wallet: Wallet, zkvSigner: HardhatEthersSigner, value: bigint) {
-	await initializeEthersWallet(wallet, zkvSigner)
-	const [encryptedValue] = await hre.cofhe.expectResultSuccess(
-		cofhejs.encrypt([Encryptable.uint8(value)] as const),
-	)
-	return encryptedValue
+  await initializeEthersWallet(wallet, zkvSigner)
+  const [encryptedValue] = await hre.cofhe.expectResultSuccess(cofhejs.encrypt([Encryptable.uint8(value)] as const))
+  return encryptedValue
 }
 
 async function encryptUint128(wallet: Wallet, zkvSigner: HardhatEthersSigner, value: bigint) {
-	await initializeEthersWallet(wallet, zkvSigner)
-	const [encryptedValue] = await hre.cofhe.expectResultSuccess(
-		cofhejs.encrypt([Encryptable.uint128(value)] as const),
-	)
-	return encryptedValue
+  await initializeEthersWallet(wallet, zkvSigner)
+  const [encryptedValue] = await hre.cofhe.expectResultSuccess(cofhejs.encrypt([Encryptable.uint128(value)] as const))
+  return encryptedValue
+}
+
+async function settleEpochWhenReady(controller: any, owner: HardhatEthersSigner, epochId: bigint) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await (await controller.connect(owner).settleEpoch(epochId)).wait()
+      return
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('EpochSettlementPending')) {
+        throw error
+      }
+
+      await hre.network.provider.send('evm_increaseTime', [1])
+      await hre.network.provider.send('evm_mine')
+    }
+  }
+
+  throw new Error('Epoch settlement stayed pending after waiting for decrypt results.')
 }
 
 async function main() {
-	if (!hre.cofhe.isPermittedEnvironment('MOCK')) {
-		throw new Error('walletProtocolCheck is intended for the mock Hardhat CoFHE environment.')
-	}
+  if (!hre.cofhe.isPermittedEnvironment('MOCK')) {
+    throw new Error('walletProtocolCheck is intended for the mock Hardhat CoFHE environment.')
+  }
 
-	const privateKey = process.env.WALLET_PRIVATE_KEY
-	if (!privateKey) {
-		throw new Error('Set WALLET_PRIVATE_KEY before running this script.')
-	}
+  const privateKey = process.env.WALLET_PRIVATE_KEY
+  if (!privateKey) {
+    throw new Error('Set WALLET_PRIVATE_KEY before running this script.')
+  }
 
-	await hre.cofhe.mocks.deployMocks({
-		deployTestBed: true,
-		gasWarning: false,
-		silent: true,
-	})
+  await hre.cofhe.mocks.deployMocks({
+    deployTestBed: true,
+    gasWarning: false,
+    silent: true,
+  })
 
-	const [owner, guardian] = await hre.ethers.getSigners()
-	const wallet = new Wallet(privateKey, hre.ethers.provider)
+  const [owner, guardian] = await hre.ethers.getSigners()
+  const wallet = new Wallet(privateKey, hre.ethers.provider)
 
-	await owner.sendTransaction({
-		to: wallet.address,
-		value: hre.ethers.parseEther('5'),
-	})
+  await owner.sendTransaction({
+    to: wallet.address,
+    value: hre.ethers.parseEther('5'),
+  })
 
-	const VeilToken = await hre.ethers.getContractFactory('VeilToken')
-	const token = await VeilToken.connect(owner).deploy()
-	await token.waitForDeployment()
+  const stack = await deployVeilFlowStack()
+  const assetById = new Map(stack.assets.map((asset) => [asset.id, asset] as const))
+  const poolById = new Map(stack.pools.map((pool) => [pool.id, pool] as const))
 
-	const VeilFaucet = await hre.ethers.getContractFactory('VeilFaucet')
-	const faucet = await VeilFaucet.connect(owner).deploy(await token.getAddress())
-	await faucet.waitForDeployment()
+  const fhEth = assetById.get('fhETH')
+  const fhUsdc = assetById.get('fhUSDC')
+  const wBtc = assetById.get('wBTC')
+  const sDai = assetById.get('sDAI')
+  const ethUsdcPool = poolById.get(0)
+  const wBtcEthPool = poolById.get(1)
+  const sDaiUsdcPool = poolById.get(2)
 
-	const GaugeController = await hre.ethers.getContractFactory('ConfidentialGaugeController')
-	const gaugeController = await GaugeController.connect(owner).deploy(await token.getAddress(), 12_500n)
-	await gaugeController.waitForDeployment()
+  if (!fhEth || !fhUsdc || !wBtc || !sDai || !ethUsdcPool || !wBtcEthPool || !sDaiUsdcPool) {
+    throw new Error('Stack deployment is missing expected assets or pools.')
+  }
 
-	const VeilStablecoin = await hre.ethers.getContractFactory('VeilStablecoin')
-	const stable = await VeilStablecoin.connect(owner).deploy()
-	await stable.waitForDeployment()
+  console.log(`Wallet under test: ${wallet.address}`)
+  console.log(`VEIL token: ${await stack.voteToken.getAddress()}`)
+  console.log(`Gauge controller: ${await stack.gaugeController.getAddress()}`)
+  console.log(`Stable controller: ${await stack.stableController.getAddress()}`)
 
-	const StableController = await hre.ethers.getContractFactory('ConfidentialStableController')
-	const stableController = await StableController.connect(owner).deploy(await stable.getAddress())
-	await stableController.waitForDeployment()
+  await (await stack.voteFaucet.connect(wallet).claim()).wait()
+  await (await fhEth.faucet.connect(wallet).claim()).wait()
+  await (await fhUsdc.faucet.connect(wallet).claim()).wait()
+  await (await wBtc.faucet.connect(wallet).claim()).wait()
+  await (await sDai.faucet.connect(wallet).claim()).wait()
+  console.log('Claimed VEIL and all market assets from their faucets.')
 
-	const MockLPToken = await hre.ethers.getContractFactory('MockLPToken')
-	const ethUsdcLp = await MockLPToken.connect(owner).deploy('ETH / fhUSDC LP', 'vLP-ETHUSDC')
-	await ethUsdcLp.waitForDeployment()
-	const sdaiUsdcLp = await MockLPToken.connect(owner).deploy('sDAI / fhUSDC LP', 'vLP-SDAIUSDC')
-	await sdaiUsdcLp.waitForDeployment()
+  await (await stack.voteToken.connect(wallet).approve(await stack.gaugeController.getAddress(), 100n)).wait()
+  await (await stack.gaugeController.connect(wallet).lock(60n, BigInt(2 * 365 * 24 * 60 * 60))).wait()
+  await (await stack.gaugeController.connect(wallet).increaseLockAmount(10n)).wait()
+  await (await stack.gaugeController.connect(wallet).extendLock(BigInt(30 * 24 * 60 * 60))).wait()
+  console.log('Lock, lock increase, and lock extension all succeeded.')
 
-	await (await stable.connect(owner).setMinter(await stableController.getAddress(), true)).wait()
-	await (await token.connect(owner).mint(await faucet.getAddress(), 2_000n)).wait()
-	await (await ethUsdcLp.connect(owner).mint(wallet.address, 50n)).wait()
-	await (await sdaiUsdcLp.connect(owner).mint(wallet.address, 20n)).wait()
+  await (await stack.voteToken.connect(wallet).wrap(wallet.address, 20n)).wait()
+  await initializeEthersWallet(wallet, owner)
+  const encryptedVeilBalance = await stack.voteToken.encBalances(wallet.address)
+  const revealedWrappedVeil = await hre.cofhe.expectResultSuccess(cofhejs.unseal(encryptedVeilBalance, FheTypes.Uint128))
+  console.log(`Wrapped VEIL balance decrypted for holder: ${revealedWrappedVeil.toString()}`)
 
-	await (await gaugeController.connect(owner).registerGauge('ETH / fhUSDC', 'volatile flagship pool', owner.address)).wait()
-	await (await gaugeController.connect(owner).registerGauge('wBTC / fhETH', 'blue-chip reserve route', owner.address)).wait()
-	await (await gaugeController.connect(owner).registerGauge('sDAI / fhUSDC', 'stable carry corridor', owner.address)).wait()
+  const epochId = await stack.gaugeController.currentEpoch()
+  await (await stack.gaugeController.connect(wallet).vote(epochId, await encryptUint8(wallet, owner, 2n))).wait()
+  console.log('Encrypted gauge vote submitted from wallet.')
 
-	await (await stableController.connect(owner).addCollateralType('ETH / fhUSDC', await ethUsdcLp.getAddress(), 250_000)).wait()
-	await (await stableController.connect(owner).addCollateralType('sDAI / fhUSDC', await sdaiUsdcLp.getAddress(), 120_000)).wait()
+  const hiddenGaugeHandle = await stack.gaugeController.getEncryptedGaugeWeight(epochId, 2)
+  const hiddenGaugeResult = await cofhejs.unseal(hiddenGaugeHandle, FheTypes.Uint128)
+  if (hiddenGaugeResult.success) {
+    throw new Error('Gauge weight unexpectedly revealed before epoch finalization.')
+  }
+  console.log('Gauge weight stayed private before reveal.')
 
-	console.log(`Wallet under test: ${wallet.address}`)
-	console.log(`VEIL token: ${await token.getAddress()}`)
-	console.log(`VEIL faucet: ${await faucet.getAddress()}`)
+  const quotedSwapOut = await wBtcEthPool.pool.getAmountOut(await wBtc.token.getAddress(), 10n)
+  await (await wBtc.token.connect(wallet).approve(await wBtcEthPool.pool.getAddress(), 10n)).wait()
+  await (await wBtcEthPool.pool.connect(wallet).swap(await wBtc.token.getAddress(), 10n, quotedSwapOut - 1n)).wait()
+  console.log(`Swap succeeded: 10 wBTC -> ${quotedSwapOut.toString()} fhETH (quoted output).`)
 
-	await (await faucet.connect(wallet).claim()).wait()
-	console.log('Claimed 100 VEIL from faucet.')
+  await (await fhEth.token.connect(wallet).approve(await ethUsdcPool.pool.getAddress(), 50n)).wait()
+  await (await fhUsdc.token.connect(wallet).approve(await ethUsdcPool.pool.getAddress(), 60n)).wait()
+  await (await ethUsdcPool.pool.connect(wallet).addLiquidity(50n, 60n)).wait()
 
-	await (await token.connect(wallet).approve(await gaugeController.getAddress(), 100n)).wait()
-	await (await gaugeController.connect(wallet).lock(60n, BigInt(2 * 365 * 24 * 60 * 60))).wait()
-	await (await gaugeController.connect(wallet).increaseLockAmount(10n)).wait()
-	await (await gaugeController.connect(wallet).extendLock(BigInt(30 * 24 * 60 * 60))).wait()
-	console.log('Lock, lock increase, and lock extension all succeeded.')
+  await (await sDai.token.connect(wallet).approve(await sDaiUsdcPool.pool.getAddress(), 20n)).wait()
+  await (await fhUsdc.token.connect(wallet).approve(await sDaiUsdcPool.pool.getAddress(), 20n)).wait()
+  await (await sDaiUsdcPool.pool.connect(wallet).addLiquidity(20n, 20n)).wait()
+  console.log('Added liquidity to ETH/fhUSDC and sDAI/fhUSDC pools.')
 
-	await (await token.connect(wallet).wrap(wallet.address, 20n)).wait()
-	await initializeEthersWallet(wallet, owner)
-	const encryptedVeilBalance = await token.encBalances(wallet.address)
-	const revealedWrappedVeil = await hre.cofhe.expectResultSuccess(
-		cofhejs.unseal(encryptedVeilBalance, FheTypes.Uint128),
-	)
-	console.log(`Wrapped VEIL balance decrypted for holder: ${revealedWrappedVeil.toString()}`)
+  const ethUsdcLpBalance = await ethUsdcPool.pool.balanceOf(wallet.address)
+  const sDaiUsdcLpBalance = await sDaiUsdcPool.pool.balanceOf(wallet.address)
+  console.log(`Minted LP balances: ${ethUsdcLpBalance.toString()} ETH/fhUSDC LP and ${sDaiUsdcLpBalance.toString()} sDAI/fhUSDC LP.`)
 
-	const epochId = await gaugeController.currentEpoch()
-	await (await gaugeController.connect(wallet).vote(epochId, await encryptUint8(wallet, owner, 2n))).wait()
-	console.log('Encrypted gauge vote submitted from wallet.')
+  await (await ethUsdcPool.pool.connect(wallet).approve(await stack.stableController.getAddress(), ethUsdcLpBalance)).wait()
+  await (await sDaiUsdcPool.pool.connect(wallet).approve(await stack.stableController.getAddress(), sDaiUsdcLpBalance)).wait()
+  await (await stack.stableController.connect(wallet).depositCollateral(0, ethUsdcLpBalance)).wait()
+  await (await stack.stableController.connect(wallet).depositCollateral(1, sDaiUsdcLpBalance)).wait()
+  console.log('LP collateral deposited from wallet.')
 
-	const hiddenGaugeHandle = await gaugeController.getEncryptedGaugeWeight(epochId, 2)
-	const hiddenGaugeResult = await cofhejs.unseal(hiddenGaugeHandle, FheTypes.Uint128)
-	if (hiddenGaugeResult.success) {
-		throw new Error('Gauge weight unexpectedly revealed before epoch finalization.')
-	}
-	console.log('Gauge weight stayed private before reveal.')
+  await (await stack.stableController.connect(wallet).mintStable(await encryptUint128(wallet, owner, 900n))).wait()
+  const encryptedStableBalance = await stack.stableToken.encBalances(wallet.address)
+  const encryptedStableDebt = await stack.stableController.getEncryptedDebt(wallet.address)
 
-	await (await ethUsdcLp.connect(wallet).approve(await stableController.getAddress(), 50n)).wait()
-	await (await sdaiUsdcLp.connect(wallet).approve(await stableController.getAddress(), 20n)).wait()
-	await (await stableController.connect(wallet).depositCollateral(0, 50n)).wait()
-	await (await stableController.connect(wallet).depositCollateral(1, 20n)).wait()
-	console.log('LP collateral deposited from wallet.')
+  const revealedStableBalance = await hre.cofhe.expectResultSuccess(cofhejs.unseal(encryptedStableBalance, FheTypes.Uint128))
+  const revealedDebt = await hre.cofhe.expectResultSuccess(cofhejs.unseal(encryptedStableDebt, FheTypes.Uint128))
+  console.log(`vhUSD balance decrypted for holder: ${revealedStableBalance.toString()}`)
+  console.log(`vhUSD debt decrypted for holder: ${revealedDebt.toString()}`)
 
-	await (await stableController.connect(wallet).mintStable(await encryptUint128(wallet, owner, 900n))).wait()
-	const encryptedStableBalance = await stable.encBalances(wallet.address)
-	const encryptedStableDebt = await stableController.getEncryptedDebt(wallet.address)
+  await (
+    await stack.stableToken
+      .connect(wallet)
+      ['transferEncrypted(address,(uint256,uint8,uint8,bytes))'](guardian.address, await encryptUint128(wallet, owner, 150n))
+  ).wait()
 
-	const revealedStableBalance = await hre.cofhe.expectResultSuccess(
-		cofhejs.unseal(encryptedStableBalance, FheTypes.Uint128),
-	)
-	const revealedDebt = await hre.cofhe.expectResultSuccess(
-		cofhejs.unseal(encryptedStableDebt, FheTypes.Uint128),
-	)
-	console.log(`vhUSD balance decrypted for holder: ${revealedStableBalance.toString()}`)
-	console.log(`vhUSD debt decrypted for holder: ${revealedDebt.toString()}`)
+  await initializeHardhatSigner(guardian)
+  const guardianEncryptedStable = await stack.stableToken.encBalances(guardian.address)
+  const guardianStableBalance = await hre.cofhe.expectResultSuccess(cofhejs.unseal(guardianEncryptedStable, FheTypes.Uint128))
+  console.log(`Encrypted stable transfer succeeded, guardian received: ${guardianStableBalance.toString()} vhUSD`)
 
-	await (
-		await stable
-			.connect(wallet)
-			['transferEncrypted(address,(uint256,uint8,uint8,bytes))'](
-				guardian.address,
-				await encryptUint128(wallet, owner, 150n),
-			)
-	).wait()
-	await initializeHardhatSigner(guardian)
-	const guardianEncryptedStable = await stable.encBalances(guardian.address)
-	const guardianStableBalance = await hre.cofhe.expectResultSuccess(
-		cofhejs.unseal(guardianEncryptedStable, FheTypes.Uint128),
-	)
-	console.log(`Encrypted stable transfer succeeded, guardian received: ${guardianStableBalance.toString()} vhUSD`)
+  await hre.network.provider.send('evm_increaseTime', [7 * 24 * 60 * 60 + 5])
+  await hre.network.provider.send('evm_mine')
 
-	await hre.network.provider.send('evm_increaseTime', [7 * 24 * 60 * 60 + 5])
-	await hre.network.provider.send('evm_mine')
-	await (await gaugeController.connect(owner).revealEpoch(epochId)).wait()
+  await (await stack.gaugeController.connect(owner).revealEpoch(epochId)).wait()
+  await settleEpochWhenReady(stack.gaugeController, owner, epochId)
 
-	await initializeHardhatSigner(owner)
-	const revealedGaugeWeight = await hre.cofhe.expectResultSuccess(
-		cofhejs.unseal(await gaugeController.getEncryptedGaugeWeight(epochId, 2), FheTypes.Uint128),
-	)
-	console.log(`Epoch reveal succeeded, selected gauge weight: ${revealedGaugeWeight.toString()}`)
+  await initializeHardhatSigner(owner)
+  const revealedGaugeWeight = await hre.cofhe.expectResultSuccess(
+    cofhejs.unseal(await stack.gaugeController.getEncryptedGaugeWeight(epochId, 2), FheTypes.Uint128),
+  )
+  console.log(`Epoch reveal succeeded, selected gauge weight: ${revealedGaugeWeight.toString()}`)
+
+  const gaugeZeroEmission = await stack.gaugeController.epochGaugeEmission(epochId, 0)
+  const gaugeOneEmission = await stack.gaugeController.epochGaugeEmission(epochId, 1)
+  const gaugeTwoEmission = await stack.gaugeController.epochGaugeEmission(epochId, 2)
+  console.log(
+    `Settled VEIL emissions: ETH/fhUSDC=${gaugeZeroEmission.toString()}, wBTC/fhETH=${gaugeOneEmission.toString()}, sDAI/fhUSDC=${gaugeTwoEmission.toString()}`,
+  )
+
+  const poolZeroVeil = await stack.voteToken.balanceOf(await ethUsdcPool.pool.getAddress())
+  const poolOneVeil = await stack.voteToken.balanceOf(await wBtcEthPool.pool.getAddress())
+  const poolTwoVeil = await stack.voteToken.balanceOf(await sDaiUsdcPool.pool.getAddress())
+  console.log(
+    `Gauge recipients received VEIL on-chain: pool0=${poolZeroVeil.toString()}, pool1=${poolOneVeil.toString()}, pool2=${poolTwoVeil.toString()}`,
+  )
 }
 
 main().catch((error) => {
-	console.error(error)
-	process.exitCode = 1
+  console.error(error)
+  process.exitCode = 1
 })

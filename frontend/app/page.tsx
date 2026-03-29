@@ -2,6 +2,7 @@ import { LogoMark } from '@/components/LogoMark'
 import { ModeStatus } from '@/components/ModeStatus'
 import { ProtocolTabs } from '@/components/ProtocolTabs'
 import { WalletPanel } from '@/components/WalletPanel'
+import { ArchitecturePanel } from '@/components/ArchitecturePanel'
 import { demoEpoch, demoStablePosition } from '@/lib/demo-data'
 
 const heroStats = [
@@ -55,6 +56,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <ArchitecturePanel />
 
       <section className="content-grid">
         <div className="stack">

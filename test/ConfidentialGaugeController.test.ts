@@ -9,6 +9,22 @@ describe('ConfidentialGaugeController', function () {
 		await hre.cofhe.expectResultSuccess(hre.cofhe.initializeWithHardhatSigner(signer))
 	}
 
+	async function settleEpochWhenReady(controller: any, owner: HardhatEthersSigner, epochId: bigint) {
+		for (let attempt = 0; attempt < 5; attempt++) {
+			try {
+				await (await controller.connect(owner).settleEpoch(epochId)).wait()
+				return
+			} catch (error) {
+				if (!(error instanceof Error) || !error.message.includes('EpochSettlementPending')) {
+					throw error
+				}
+				await time.increase(1)
+			}
+		}
+
+		throw new Error('Epoch settlement stayed pending after waiting for decrypt results.')
+	}
+
 	async function encryptGaugeVote(signer: HardhatEthersSigner, gaugeIndex: number) {
 		await initializeSigner(signer)
 		const [encryptedVote] = await hre.cofhe.expectResultSuccess(
@@ -18,11 +34,11 @@ describe('ConfidentialGaugeController', function () {
 	}
 
 	async function deployProtocolFixture() {
-		const [owner, bob, alice, carol] = await hre.ethers.getSigners()
+		const [owner, bob, alice, carol, gaugeTreasury0, gaugeTreasury1, gaugeTreasury2] = await hre.ethers.getSigners()
 		const gauges = [
-			{ name: 'ETH / fhUSDC', label: 'volatile flagship pool' },
-			{ name: 'wBTC / fhETH', label: 'blue-chip reserve route' },
-			{ name: 'sDAI / fhUSDC', label: 'stable carry corridor' },
+			{ name: 'ETH / fhUSDC', label: 'volatile flagship pool', recipient: gaugeTreasury0.address },
+			{ name: 'wBTC / fhETH', label: 'blue-chip reserve route', recipient: gaugeTreasury1.address },
+			{ name: 'sDAI / fhUSDC', label: 'stable carry corridor', recipient: gaugeTreasury2.address },
 		]
 
 		const VoteToken = await hre.ethers.getContractFactory('VeilToken')
@@ -34,8 +50,10 @@ describe('ConfidentialGaugeController', function () {
 		await controller.waitForDeployment()
 
 		for (const gauge of gauges) {
-			await (await controller.connect(owner).registerGauge(gauge.name, gauge.label, owner.address)).wait()
+			await (await controller.connect(owner).registerGauge(gauge.name, gauge.label, gauge.recipient)).wait()
 		}
+
+		await (await token.connect(owner).mint(await controller.getAddress(), 12_500n)).wait()
 
 		await (await token.mint(bob.address, 1_000n)).wait()
 		await (await token.mint(alice.address, 600n)).wait()
@@ -50,7 +68,19 @@ describe('ConfidentialGaugeController', function () {
 		await (await controller.connect(alice).lock(600n, BigInt(2 * year))).wait()
 		await (await controller.connect(carol).lock(400n, BigInt(1 * year))).wait()
 
-		return { owner, bob, alice, carol, token, controller, gauges, epochId: 0n }
+		return {
+			owner,
+			bob,
+			alice,
+			carol,
+			token,
+			controller,
+			gauges,
+			gaugeTreasury0,
+			gaugeTreasury1,
+			gaugeTreasury2,
+			epochId: 0n,
+		}
 	}
 
 	beforeEach(function () {
@@ -100,8 +130,9 @@ describe('ConfidentialGaugeController', function () {
 		expect(await token.balanceOf(bob.address)).to.equal(0n)
 	})
 
-	it('keeps gauge weights private until the epoch is revealed', async function () {
-		const { owner, bob, alice, carol, controller, gauges, epochId } = await loadFixture(deployProtocolFixture)
+	it('keeps gauge weights private until the epoch is revealed and settles emissions across all gauges', async function () {
+		const { owner, bob, alice, carol, controller, gauges, token, gaugeTreasury0, gaugeTreasury1, gaugeTreasury2, epochId } =
+			await loadFixture(deployProtocolFixture)
 
 		const bobPower = await controller.votingPowerOf(bob.address)
 		const alicePower = await controller.votingPowerOf(alice.address)
@@ -139,6 +170,21 @@ describe('ConfidentialGaugeController', function () {
 		expect(gaugeTwoWeight).to.be.gte(alicePower - 1n)
 		expect(gaugeTwoWeight).to.be.lte(alicePower)
 		expect(await controller.epochEmission(epochId)).to.equal(12_500n)
+
+		await settleEpochWhenReady(controller, owner, epochId)
+
+		const gaugeZeroEmission = await controller.epochGaugeEmission(epochId, 0)
+		const gaugeOneEmission = await controller.epochGaugeEmission(epochId, 1)
+		const gaugeTwoEmission = await controller.epochGaugeEmission(epochId, 2)
+
+		expect(gaugeZeroEmission).to.be.gt(gaugeTwoEmission)
+		expect(gaugeTwoEmission).to.be.gt(gaugeOneEmission)
+		expect(gaugeOneEmission).to.be.gt(0n)
+		expect(gaugeZeroEmission + gaugeOneEmission + gaugeTwoEmission).to.equal(12_500n)
+
+		expect(await token.balanceOf(gaugeTreasury0.address)).to.equal(gaugeZeroEmission)
+		expect(await token.balanceOf(gaugeTreasury1.address)).to.equal(gaugeOneEmission)
+		expect(await token.balanceOf(gaugeTreasury2.address)).to.equal(gaugeTwoEmission)
 	})
 
 	it('rejects double voting in the same epoch', async function () {

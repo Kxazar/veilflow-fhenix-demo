@@ -29,8 +29,12 @@ contract ConfidentialGaugeController is Ownable {
     error EpochAlreadyVoted();
     error EpochNotFinished();
     error EpochAlreadyRevealed();
+    error EpochAlreadySettled();
+    error EpochSettlementPending();
     error NoVotingPower();
     error ZeroAddress();
+    error NoActiveGauges();
+    error InsufficientEmissionInventory();
 
     event GaugeRegistered(uint256 indexed gaugeId, string name, string pairLabel, address recipient);
     event Locked(address indexed account, uint256 amount, uint256 unlockTime);
@@ -39,12 +43,15 @@ contract ConfidentialGaugeController is Ownable {
     event Withdrawn(address indexed account, uint256 amount);
     event Voted(uint256 indexed epochId, address indexed voter, euint8 encryptedGaugeIndex, uint256 votingPower);
     event EpochRevealed(uint256 indexed epochId, uint256 emissionAmount);
+    event EpochSettled(uint256 indexed epochId, uint256 totalWeight, uint256 floorPerGauge);
     event WeeklyEmissionUpdated(uint256 newEmission);
 
     uint64 public constant MIN_LOCK_TIME = 7 days;
     uint64 public constant MAX_LOCK_TIME = 4 * 365 days;
     uint64 public constant EPOCH_DURATION = 7 days;
     uint8 public constant MAX_GAUGES = 6;
+    uint16 public constant FLOOR_PER_GAUGE_BPS = 500;
+    uint16 public constant BPS = 10_000;
 
     IERC20 public immutable voteToken;
     uint256 public immutable launchTime;
@@ -60,7 +67,9 @@ contract ConfidentialGaugeController is Ownable {
     mapping(uint256 => mapping(uint256 => bool)) private epochGaugeInitialized;
     mapping(uint256 => mapping(address => bool)) public hasVotedInEpoch;
     mapping(uint256 => bool) public epochRevealed;
+    mapping(uint256 => bool) public epochSettled;
     mapping(uint256 => uint256) public epochEmission;
+    mapping(uint256 => mapping(uint256 => uint256)) public epochGaugeEmission;
 
     constructor(address voteToken_, uint256 weeklyEmission_) Ownable(msg.sender) {
         if (voteToken_ == address(0)) revert ZeroAddress();
@@ -199,9 +208,116 @@ contract ConfidentialGaugeController is Ownable {
             }
 
             FHE.allowGlobal(epochGaugeWeights[epochId][gaugeId]);
+            FHE.decrypt(epochGaugeWeights[epochId][gaugeId]);
         }
 
         emit EpochRevealed(epochId, weeklyEmission);
+    }
+
+    function settleEpoch(uint256 epochId) external {
+        if (!epochRevealed[epochId]) revert EpochNotFinished();
+        if (epochSettled[epochId]) revert EpochAlreadySettled();
+
+        (uint256[] memory weights, uint256 activeGaugeCount, uint256 totalWeight, uint256 firstActiveGaugeId) =
+            _collectEpochWeights(epochId);
+        uint256 emissionBudget = epochEmission[epochId];
+        if (voteToken.balanceOf(address(this)) < emissionBudget) revert InsufficientEmissionInventory();
+
+        uint256 floorPerGauge =
+            _assignEpochEmission(epochId, weights, activeGaugeCount, totalWeight, emissionBudget, firstActiveGaugeId);
+        epochSettled[epochId] = true;
+        _transferEpochEmission(epochId);
+        emit EpochSettled(epochId, totalWeight, floorPerGauge);
+    }
+
+    function _collectEpochWeights(uint256 epochId)
+        internal
+        view
+        returns (uint256[] memory weights, uint256 activeGaugeCount, uint256 totalWeight, uint256 firstActiveGaugeId)
+    {
+        weights = new uint256[](gaugeCount);
+        firstActiveGaugeId = type(uint256).max;
+
+        for (uint256 gaugeId = 0; gaugeId < gaugeCount; gaugeId++) {
+            if (!gauges[gaugeId].active) {
+                continue;
+            }
+
+            if (firstActiveGaugeId == type(uint256).max) {
+                firstActiveGaugeId = gaugeId;
+            }
+            activeGaugeCount++;
+
+            (uint256 decryptedWeight, bool decrypted) = FHE.getDecryptResultSafe(epochGaugeWeights[epochId][gaugeId]);
+            if (!decrypted) revert EpochSettlementPending();
+
+            weights[gaugeId] = decryptedWeight;
+            totalWeight += decryptedWeight;
+        }
+
+        if (activeGaugeCount == 0) revert NoActiveGauges();
+    }
+
+    function _assignEpochEmission(
+        uint256 epochId,
+        uint256[] memory weights,
+        uint256 activeGaugeCount,
+        uint256 totalWeight,
+        uint256 emissionBudget,
+        uint256 firstActiveGaugeId
+    ) internal returns (uint256 floorPerGauge) {
+        floorPerGauge = (emissionBudget * FLOOR_PER_GAUGE_BPS) / BPS;
+        uint256 totalFloor = floorPerGauge * activeGaugeCount;
+        if (totalFloor > emissionBudget) {
+            floorPerGauge = emissionBudget / activeGaugeCount;
+            totalFloor = floorPerGauge * activeGaugeCount;
+        }
+
+        uint256 remainingBudget = emissionBudget - totalFloor;
+        uint256 distributed;
+
+        for (uint256 gaugeId = 0; gaugeId < gaugeCount; gaugeId++) {
+            if (!gauges[gaugeId].active) {
+                continue;
+            }
+
+            uint256 gaugeEmission = floorPerGauge + _variableShare(remainingBudget, activeGaugeCount, totalWeight, weights[gaugeId]);
+            epochGaugeEmission[epochId][gaugeId] = gaugeEmission;
+            distributed += gaugeEmission;
+        }
+
+        uint256 undistributed = emissionBudget - distributed;
+        if (undistributed != 0) {
+            epochGaugeEmission[epochId][firstActiveGaugeId] += undistributed;
+        }
+    }
+
+    function _variableShare(
+        uint256 remainingBudget,
+        uint256 activeGaugeCount,
+        uint256 totalWeight,
+        uint256 gaugeWeight
+    ) internal pure returns (uint256) {
+        if (remainingBudget == 0) {
+            return 0;
+        }
+
+        if (totalWeight == 0) {
+            return remainingBudget / activeGaugeCount;
+        }
+
+        return (remainingBudget * gaugeWeight) / totalWeight;
+    }
+
+    function _transferEpochEmission(uint256 epochId) internal {
+        for (uint256 gaugeId = 0; gaugeId < gaugeCount; gaugeId++) {
+            uint256 gaugeEmission = epochGaugeEmission[epochId][gaugeId];
+            if (gaugeEmission == 0) {
+                continue;
+            }
+
+            voteToken.transfer(gauges[gaugeId].recipient, gaugeEmission);
+        }
     }
 
     function currentEpoch() public view returns (uint256) {

@@ -6,6 +6,8 @@ This repository started from the official `cofhe-hardhat-starter` and now contai
 - a ve-style gauge controller inspired by Curve and Aerodrome
 - wrapped encrypted VEIL balances adapted from the FHERC20 patterns in `marronjo/fhe-hook-template`
 - an on-chain VEIL faucet that dispenses 100 tokens once per 24 hours per wallet
+- market asset faucets for `fhETH`, `fhUSDC`, `wBTC`, and `sDAI`
+- constant-product swap pools with LP minting
 - a shielded LP-backed stablecoin controller with 160% minimum collateralization
 - a Next.js interface for demo mode now and live Fhenix mode later
 
@@ -42,6 +44,17 @@ An on-chain faucet for `VEIL` where:
 - claims are limited to one request every `24 hours`
 - cooldown enforcement lives in the contract, not in the frontend
 
+The same faucet contract is also reused for the market assets so the frontend can bootstrap the full path from swap to LP to vhUSD.
+
+### `VeilLiquidityPool`
+
+A minimal CPMM rail where:
+
+- supported market pairs can be swapped directly
+- LP shares are minted on-chain when liquidity is added
+- selected LP pairs are whitelisted as vhUSD collateral
+- gauge rewards can be pushed to pool recipient addresses at epoch settlement
+
 ### `ConfidentialStableController` + `VeilStablecoin`
 
 A stablecoin rail where:
@@ -61,6 +74,8 @@ A Next.js app called `VeilFlow` that includes:
 - confidential gauge voting console
 - encrypted vhUSD mint panel
 - VEIL faucet tab
+- market asset faucet coverage
+- swap and LP tab
 - demo mode by default
 - live-ready mode via env vars for RPC, CoFHE endpoints, and deployed contract addresses
 
@@ -120,12 +135,28 @@ corepack pnpm test:stable
 corepack pnpm test:faucet
 ```
 
+### Swap and LP
+
+```bash
+corepack pnpm test:pools
+```
+
 ### Wallet flow verification
 
-Run the full faucet -> ve lock -> vote -> LP collateral -> vhUSD flow with a provided private key:
+Run the full faucet -> lock -> wrap -> hidden vote -> swap -> LP -> vhUSD -> epoch settlement flow with a provided private key:
 
 ```bash
 WALLET_PRIVATE_KEY=... corepack pnpm demo:wallet-check
+```
+
+### Full-stack deployment
+
+Deploy the full VeilFlow stack and print frontend env vars:
+
+```bash
+corepack pnpm deploy:veilflow
+corepack pnpm eth-sepolia:deploy-veilflow
+corepack pnpm arb-sepolia:deploy-veilflow
 ```
 
 ### Full suite
@@ -169,12 +200,16 @@ NEXT_PUBLIC_APP_MODE=live
 - `contracts/VeilFaucet.sol`
 - `contracts/VeilStablecoin.sol`
 - `contracts/ConfidentialStableController.sol`
+- `contracts/MockAssetToken.sol`
+- `contracts/VeilLiquidityPool.sol`
 - `scripts/privateVotingDemo.ts`
 - `scripts/confidentialVeGaugeDemo.ts`
+- `scripts/deployVeilFlowStack.ts`
 - `scripts/verifyWalletProtocolFlow.ts`
 - `test/ConfidentialGaugeController.test.ts`
 - `test/ConfidentialStableController.test.ts`
 - `test/VeilFaucet.test.ts`
+- `test/VeilLiquidityPool.test.ts`
 - `frontend/app/page.tsx`
 - `frontend/hooks/useCofhe.ts`
 

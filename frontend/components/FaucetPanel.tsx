@@ -1,92 +1,68 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAccount, usePublicClient, useWriteContract } from 'wagmi'
+import { useMemo, useState } from 'react'
+import { useAccount, useWriteContract } from 'wagmi'
 
-import { contracts, erc20Abi, faucetAbi, isFaucetConfigured } from '@/lib/contracts'
+import { contracts, faucetAbi, isFaucetConfigured, marketAssets } from '@/lib/contracts'
+import { demoAssets } from '@/lib/demo-data'
+
+type FaucetItem = {
+  id: string
+  title: string
+  amount: number
+  faucetAddress: `0x${string}` | null
+}
 
 function describeError(error: { shortMessage?: string; message?: string } | null | undefined) {
   return error?.shortMessage ?? error?.message ?? 'Faucet transaction failed'
 }
 
-function formatTimestamp(timestamp: bigint | null) {
-  if (!timestamp || timestamp === BigInt(0)) {
-    return 'available now'
-  }
-
-  return new Date(Number(timestamp) * 1000).toLocaleString()
-}
-
 export function FaucetPanel() {
   const { address } = useAccount()
-  const publicClient = usePublicClient()
   const { writeContractAsync, isPending } = useWriteContract()
 
-  const [faucetBalance, setFaucetBalance] = useState<string>('1000')
-  const [canClaim, setCanClaim] = useState<boolean>(true)
-  const [nextClaimAt, setNextClaimAt] = useState<bigint | null>(BigInt(0))
+  const [selectedFaucetId, setSelectedFaucetId] = useState('VEIL')
   const [status, setStatus] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!publicClient || !address || !isFaucetConfigured) {
-      return
-    }
+  const faucets = useMemo<FaucetItem[]>(
+    () => [
+      {
+        id: 'VEIL',
+        title: 'VEIL',
+        amount: 100,
+        faucetAddress: isFaucetConfigured ? contracts.faucet : null,
+      },
+      ...demoAssets.map((asset, index) => ({
+        id: asset.id,
+        title: asset.name,
+        amount: asset.faucetAmount,
+        faucetAddress:
+          marketAssets[index] && marketAssets[index].faucet !== '0x0000000000000000000000000000000000000000'
+            ? marketAssets[index].faucet
+            : null,
+      })),
+    ],
+    [],
+  )
 
-    let cancelled = false
-
-    const load = async () => {
-      const [balance, eligible, nextClaim] = await Promise.all([
-        publicClient.readContract({
-          address: contracts.voteToken,
-          abi: erc20Abi,
-          functionName: 'balanceOf',
-          args: [contracts.faucet],
-        }),
-        publicClient.readContract({
-          address: contracts.faucet,
-          abi: faucetAbi,
-          functionName: 'canClaim',
-          args: [address],
-        }),
-        publicClient.readContract({
-          address: contracts.faucet,
-          abi: faucetAbi,
-          functionName: 'getNextClaimAt',
-          args: [address],
-        }),
-      ])
-
-      if (!cancelled) {
-        setFaucetBalance(balance.toString())
-        setCanClaim(eligible)
-        setNextClaimAt(nextClaim)
-      }
-    }
-
-    void load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [address, publicClient])
+  const selectedFaucet = faucets.find((item) => item.id === selectedFaucetId) ?? faucets[0]
 
   const handleClaim = async () => {
-    if (!isFaucetConfigured) {
-      setStatus('The faucet tab is wired, but the live faucet address has not been configured yet.')
+    if (!selectedFaucet.faucetAddress) {
+      setStatus(`${selectedFaucet.title} faucet is wired in the UI, but its live contract address has not been configured yet.`)
       return
     }
 
     try {
-      setStatus('Submitting VEIL faucet claim...')
-
+      setStatus(`Submitting ${selectedFaucet.title} faucet claim...`)
       await writeContractAsync({
-        address: contracts.faucet,
+        address: selectedFaucet.faucetAddress,
         abi: faucetAbi,
         functionName: 'claim',
         args: [],
       })
 
-      setStatus('Claim sent. You can request 100 VEIL once every 24 hours per wallet.')
+      setStatus(`Claim sent. ${selectedFaucet.amount} ${selectedFaucet.title} can be claimed once every 24 hours per wallet.`)
     } catch (error) {
       setStatus(describeError(error as { shortMessage?: string; message?: string }))
     }
@@ -96,42 +72,48 @@ export function FaucetPanel() {
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">VEIL faucet</p>
-          <h3>On-chain onboarding rail for new wallets</h3>
+          <p className="eyebrow">Protocol faucets</p>
+          <h3>Bootstrap VEIL and market assets on-chain</h3>
         </div>
+      </div>
+
+      <div className="gauge-list">
+        {faucets.map((faucet) => (
+          <label className={`gauge-card ${selectedFaucetId === faucet.id ? 'gauge-card-active' : ''}`} key={faucet.id}>
+            <input checked={selectedFaucetId === faucet.id} name="faucet" onChange={() => setSelectedFaucetId(faucet.id)} type="radio" />
+            <div>
+              <strong>{faucet.title}</strong>
+              <p>{faucet.amount} tokens per claim</p>
+              <span>one claim every 24 hours per wallet</span>
+            </div>
+          </label>
+        ))}
       </div>
 
       <div className="metric-band">
         <div>
+          <span className="muted">Selected asset</span>
+          <strong>{selectedFaucet.title}</strong>
+        </div>
+        <div>
           <span className="muted">Per request</span>
-          <strong>100 VEIL</strong>
+          <strong>{selectedFaucet.amount}</strong>
         </div>
         <div>
-          <span className="muted">Cooldown</span>
-          <strong>24 hours</strong>
+          <span className="muted">Wallet status</span>
+          <strong>{address ? 'ready to claim' : 'connect wallet first'}</strong>
         </div>
-        <div>
-          <span className="muted">Faucet balance</span>
-          <strong>{faucetBalance} VEIL</strong>
-        </div>
-      </div>
-
-      <div className="visibility-table">
-        <article className="visibility-row">
-          <strong>Wallet status</strong>
-          <p>{address ? (canClaim ? 'eligible for claim' : `next claim: ${formatTimestamp(nextClaimAt)}`) : 'connect a wallet to check eligibility'}</p>
-        </article>
       </div>
 
       <div className="button-row">
-        <button className="button" disabled={!address || !canClaim || isPending} onClick={() => void handleClaim()}>
-          {isPending ? 'Pending...' : 'Claim 100 VEIL'}
+        <button className="button" disabled={!address || isPending} onClick={() => void handleClaim()}>
+          {isPending ? 'Pending...' : `Claim ${selectedFaucet.title}`}
         </button>
       </div>
 
       <p className="supporting-copy">
-        The faucet rate limit is enforced on-chain, so the website cannot bypass it. Each wallet can make one claim per
-        rolling 24 hour window.
+        VEIL and market faucets are rate-limited in the contracts themselves. That means the website cannot bypass the
+        one-wallet-per-24-hour rule even if someone replays the UI.
       </p>
 
       {status ? <p className="supporting-copy">{status}</p> : null}

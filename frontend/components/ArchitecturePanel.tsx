@@ -1,4 +1,6 @@
-import { protocolHighlights } from '@/lib/demo-data'
+'use client'
+
+import { demoGauges, demoPools, protocolHighlights } from '@/lib/demo-data'
 
 const architectureLayers = [
   {
@@ -39,12 +41,35 @@ const referenceRepos = [
 
 export function ArchitecturePanel() {
   return (
-    <div className="architecture-stack">
+    <section className="panel architecture-top">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Protocol shape</p>
-          <h3>How the protocol is wired end to end</h3>
+          <p className="eyebrow">Architecture</p>
+          <h3>One protocol, three rails: governance, liquidity, and private credit</h3>
         </div>
+        <p className="protocol-header-copy">
+          VeilFlow combines an emissions game, actual swap and LP primitives, and a shielded stablecoin path that turns
+          selected LP positions into confidential credit.
+        </p>
+      </div>
+
+      <div className="overview-grid">
+        <article className="overview-card">
+          <span className="eyebrow">governance rail</span>
+          <p>Users claim VEIL, lock it into veVEIL, and steer weekly emissions with encrypted gauge selection.</p>
+        </article>
+        <article className="overview-card">
+          <span className="eyebrow">liquidity rail</span>
+          <p>Supported pools are not placeholders: they price swaps, mint LP, and receive real VEIL emissions after settlement.</p>
+        </article>
+        <article className="overview-card">
+          <span className="eyebrow">private credit rail</span>
+          <p>LP collateral remains public, while requested vhUSD mint size, resulting debt, and shielded balances stay encrypted.</p>
+        </article>
+        <article className="overview-card">
+          <span className="eyebrow">epoch settlement</span>
+          <p>The controller reveals aggregate weights, settles VEIL with a floor for each active gauge, and pushes rewards on-chain.</p>
+        </article>
       </div>
 
       <div className="architecture-grid">
@@ -62,6 +87,21 @@ export function ArchitecturePanel() {
         ))}
       </div>
 
+      <div className="overview-band">
+        <div>
+          <span className="muted">Active markets</span>
+          <strong>{demoGauges.map((gauge) => gauge.name).join(' / ')}</strong>
+        </div>
+        <div>
+          <span className="muted">LP path</span>
+          <strong>{demoPools.map((pool) => `${pool.symbol}: ${pool.userLpBalance}`).join(' / ')}</strong>
+        </div>
+        <div>
+          <span className="muted">Emission model</span>
+          <strong>every active gauge keeps a non-zero VEIL weekly flow</strong>
+        </div>
+      </div>
+
       <div className="flow-list">
         {architectureFlows.map((item) => (
           <article className="flow-card" key={item}>
@@ -77,6 +117,6 @@ export function ArchitecturePanel() {
           </a>
         ))}
       </div>
-    </div>
+    </section>
   )
 }
