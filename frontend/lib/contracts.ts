@@ -23,6 +23,7 @@ export const contracts = {
   voteToken: (process.env.NEXT_PUBLIC_VEIL_TOKEN_ADDRESS ?? zeroAddress) as Address,
   stableController: (process.env.NEXT_PUBLIC_STABLE_CONTROLLER_ADDRESS ?? zeroAddress) as Address,
   stableToken: (process.env.NEXT_PUBLIC_STABLE_TOKEN_ADDRESS ?? zeroAddress) as Address,
+  faucet: (process.env.NEXT_PUBLIC_VEIL_FAUCET_ADDRESS ?? zeroAddress) as Address,
 }
 
 export const collateralTokens = [
@@ -53,6 +54,8 @@ export const isLiveConfigured =
   Boolean(fheEndpoints.coFheUrl) &&
   Boolean(fheEndpoints.verifierUrl) &&
   Boolean(fheEndpoints.thresholdNetworkUrl)
+
+export const isFaucetConfigured = contracts.faucet !== zeroAddress
 
 export const gaugeControllerAbi = [
   {
@@ -202,6 +205,30 @@ export const stableTokenAbi = [
     type: 'function',
     stateMutability: 'view',
     name: 'encBalances',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+] as const
+
+export const faucetAbi = [
+  {
+    type: 'function',
+    stateMutability: 'nonpayable',
+    name: 'claim',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    stateMutability: 'view',
+    name: 'canClaim',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    type: 'function',
+    stateMutability: 'view',
+    name: 'getNextClaimAt',
     inputs: [{ name: 'account', type: 'address' }],
     outputs: [{ name: '', type: 'uint256' }],
   },

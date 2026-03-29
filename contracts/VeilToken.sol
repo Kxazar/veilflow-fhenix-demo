@@ -21,6 +21,10 @@ contract VeilToken is ERC20, Ownable, IFHERC20 {
         FHE.allowThis(ZERO);
     }
 
+    function decimals() public pure override returns (uint8) {
+        return 0;
+    }
+
     function mint(address user, uint256 amount) public onlyOwner {
         _mint(user, amount);
     }

@@ -7,6 +7,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract MockLPToken is ERC20, Ownable {
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) Ownable(msg.sender) {}
 
+    function decimals() public pure override returns (uint8) {
+        return 0;
+    }
+
     function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }

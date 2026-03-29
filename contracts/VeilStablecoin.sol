@@ -27,6 +27,10 @@ contract VeilStablecoin is ERC20, Ownable {
         FHE.allowThis(ZERO);
     }
 
+    function decimals() public pure override returns (uint8) {
+        return 0;
+    }
+
     function setMinter(address account, bool allowed) external onlyOwner {
         minters[account] = allowed;
     }

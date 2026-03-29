@@ -1,8 +1,6 @@
-import { ArchitecturePanel } from '@/components/ArchitecturePanel'
-import { GaugeBoard } from '@/components/GaugeBoard'
-import { LockPlanner } from '@/components/LockPlanner'
+import { LogoMark } from '@/components/LogoMark'
 import { ModeStatus } from '@/components/ModeStatus'
-import { StableMintPanel } from '@/components/StableMintPanel'
+import { ProtocolTabs } from '@/components/ProtocolTabs'
 import { WalletPanel } from '@/components/WalletPanel'
 import { demoEpoch, demoStablePosition } from '@/lib/demo-data'
 
@@ -24,6 +22,20 @@ const heroStats = [
 export default function HomePage() {
   return (
     <main className="page-shell">
+      <section className="brand-bar">
+        <div className="brand-lockup">
+          <LogoMark className="brand-logo" />
+          <div>
+            <p className="eyebrow">VeilFlow</p>
+            <h2 className="brand-title">Confidential DeFi on Fhenix</h2>
+          </div>
+        </div>
+        <p className="brand-copy">
+          Curve-style coordination, Aerodrome-like emissions, and a shielded stablecoin flow that keeps routing intent
+          and credit state private.
+        </p>
+      </section>
+
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">VeilFlow</p>
@@ -46,15 +58,12 @@ export default function HomePage() {
 
       <section className="content-grid">
         <div className="stack">
-          <ModeStatus />
-          <LockPlanner />
-          <GaugeBoard />
-          <StableMintPanel />
+          <ProtocolTabs />
         </div>
 
         <div className="stack stack-side">
+          <ModeStatus />
           <WalletPanel />
-          <ArchitecturePanel />
         </div>
       </section>
     </main>

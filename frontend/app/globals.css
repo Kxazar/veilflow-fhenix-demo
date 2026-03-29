@@ -65,6 +65,46 @@ textarea {
   padding: 48px 0 72px;
 }
 
+.brand-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 18px 24px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 249, 238, 0.7);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.brand-lockup {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.brand-logo {
+  width: 60px;
+  height: 60px;
+  flex: 0 0 auto;
+}
+
+.brand-title {
+  margin: 4px 0 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+}
+
+.brand-copy,
+.protocol-header-copy {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.75fr);
@@ -162,6 +202,20 @@ textarea {
   padding-bottom: 18px;
 }
 
+.protocol-shell {
+  padding: 22px;
+}
+
+.protocol-header {
+  align-items: end;
+}
+
+.protocol-shell h2 {
+  margin: 6px 0 0;
+  font-size: 1.7rem;
+  line-height: 1.05;
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -243,6 +297,77 @@ textarea {
 
 .button-row {
   margin-top: 18px;
+}
+
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.tab-button {
+  border: 1px solid rgba(73, 45, 21, 0.12);
+  border-radius: 999px;
+  padding: 11px 16px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tab-button-active {
+  background: linear-gradient(135deg, rgba(176, 74, 31, 0.14), rgba(214, 106, 42, 0.2));
+  border-color: rgba(176, 74, 31, 0.35);
+}
+
+.tab-panel {
+  display: grid;
+}
+
+.overview-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.overview-card,
+.flow-card {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 251, 246, 0.74);
+}
+
+.overview-card p,
+.visibility-row p,
+.flow-card p,
+.architecture-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.overview-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.visibility-table {
+  display: grid;
+  gap: 12px;
+}
+
+.visibility-row {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 252, 244, 0.7);
 }
 
 .button {
@@ -378,6 +503,12 @@ textarea {
   gap: 12px;
 }
 
+.architecture-stack,
+.flow-list {
+  display: grid;
+  gap: 12px;
+}
+
 .architecture-card {
   padding: 16px;
   border: 1px solid var(--line);
@@ -415,6 +546,7 @@ textarea {
 }
 
 @media (max-width: 1120px) {
+  .brand-bar,
   .hero,
   .content-grid {
     grid-template-columns: 1fr;
@@ -436,8 +568,15 @@ textarea {
   .status-grid,
   .wallet-meta,
   .metric-band,
+  .overview-grid,
+  .overview-band,
   .gauge-card {
     grid-template-columns: 1fr;
+  }
+
+  .brand-bar {
+    padding: 18px;
+    align-items: flex-start;
   }
 
   .gauge-metrics {
