@@ -23,7 +23,7 @@ contract VeilStablecoin is ERC20, Ownable {
         _;
     }
 
-    constructor() ERC20("Veil USD", "vhUSD") Ownable(msg.sender) {
+    constructor() ERC20("Noctra Dollar", "nUSD") Ownable(msg.sender) {
         FHE.allowThis(ZERO);
     }
 

@@ -1,11 +1,12 @@
 'use client'
 
+import { brand } from '@/lib/brand'
 import { demoGauges, demoPools, protocolHighlights } from '@/lib/demo-data'
 
 const architectureLayers = [
   {
-    title: '1. veVEIL control layer',
-    text: 'Public VEIL is locked into the gauge controller, producing linear time-decaying voting power. This creates the same strategic duration game that Curve and Aerodrome users know.',
+    title: `1. ${brand.veGovernanceTokenSymbol} control layer`,
+    text: `${brand.governanceTokenSymbol} is locked into the gauge controller to produce linear time-decaying voting power. This keeps the same strategic duration game that Curve and Aerodrome users know, but frames it inside a more tactical credit stack.`,
   },
   {
     title: '2. confidential gauge layer',
@@ -13,13 +14,13 @@ const architectureLayers = [
   },
   {
     title: '3. shielded credit layer',
-    text: 'Selected LP tokens enter the stable controller as transparent collateral, but the desired vhUSD mint amount, the resulting debt, and the user balance stay encrypted. The controller clips every request to the remaining 160% safe headroom.',
+    text: `Selected LP tokens enter the stable controller as transparent collateral, but the desired ${brand.stableTokenSymbol} mint amount, the resulting debt, and the user balance stay encrypted. The controller clips every request to the remaining 160% safe headroom.`,
   },
 ]
 
 const architectureFlows = [
   'Create a permit once, then reuse it to submit encrypted votes and later decrypt your own outputs.',
-  'Wrap VEIL into the encrypted balance rail when the holder wants shielded treasury or position management.',
+  `Wrap ${brand.governanceTokenSymbol} into the encrypted balance rail when the holder wants shielded treasury or position management.`,
   'Reveal epoch weights only after the voting window closes, preserving price discovery until emissions are set.',
   'Let users discover mint capacity from LP collateral without broadcasting the exact size of their debt.',
 ]
@@ -45,10 +46,10 @@ export function ArchitecturePanel() {
       <div className="panel-header">
         <div>
           <p className="eyebrow">Architecture</p>
-          <h3>One protocol, three rails: governance, liquidity, and private credit</h3>
+          <h3>{brand.protocol}: governance, liquidity, and private credit in one surface</h3>
         </div>
         <p className="protocol-header-copy">
-          VeilFlow combines an emissions game, actual swap and LP primitives, and a shielded stablecoin path that turns
+          {brand.protocol} combines an emissions game, actual swap and LP primitives, and a shielded stablecoin path that turns
           selected LP positions into confidential credit.
         </p>
       </div>
@@ -56,19 +57,27 @@ export function ArchitecturePanel() {
       <div className="overview-grid">
         <article className="overview-card">
           <span className="eyebrow">governance rail</span>
-          <p>Users claim VEIL, lock it into veVEIL, and steer weekly emissions with encrypted gauge selection.</p>
+          <p>
+            Users claim {brand.governanceTokenSymbol}, lock it into {brand.veGovernanceTokenSymbol}, and steer weekly emissions with encrypted gauge selection.
+          </p>
         </article>
         <article className="overview-card">
           <span className="eyebrow">liquidity rail</span>
-          <p>Supported pools are not placeholders: they price swaps, mint LP, and receive real VEIL emissions after settlement.</p>
+          <p>
+            Supported pools are not placeholders: they price swaps, mint LP, and receive real {brand.governanceTokenSymbol} emissions after settlement.
+          </p>
         </article>
         <article className="overview-card">
           <span className="eyebrow">private credit rail</span>
-          <p>LP collateral remains public, while requested vhUSD mint size, resulting debt, and shielded balances stay encrypted.</p>
+          <p>
+            LP collateral remains public, while requested {brand.stableTokenSymbol} mint size, resulting debt, and shielded balances stay encrypted.
+          </p>
         </article>
         <article className="overview-card">
           <span className="eyebrow">epoch settlement</span>
-          <p>The controller reveals aggregate weights, settles VEIL with a floor for each active gauge, and pushes rewards on-chain.</p>
+          <p>
+            The controller reveals aggregate weights, settles {brand.governanceTokenSymbol} with a floor for each active gauge, and pushes rewards on-chain.
+          </p>
         </article>
       </div>
 
@@ -98,7 +107,7 @@ export function ArchitecturePanel() {
         </div>
         <div>
           <span className="muted">Emission model</span>
-          <strong>every active gauge keeps a non-zero VEIL weekly flow</strong>
+          <strong>{`every active gauge keeps a non-zero ${brand.governanceTokenSymbol} weekly flow`}</strong>
         </div>
       </div>
 

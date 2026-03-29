@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useAccount, usePublicClient, useWriteContract } from 'wagmi'
 
+import { brand } from '@/lib/brand'
 import { areAssetsConfigured, arePoolsConfigured, erc20Abi, liquidityPools, marketAssets, poolAbi } from '@/lib/contracts'
 import { demoAssets, demoPools } from '@/lib/demo-data'
 
@@ -82,7 +83,7 @@ export function SwapAndLpPanel() {
         args: [BigInt(liquidityAmount0), BigInt(liquidityAmount1)],
       })
 
-      setStatus('Liquidity added. The resulting LP token can be used as collateral in vhUSD markets if the pair is whitelisted.')
+      setStatus(`Liquidity added. The resulting LP token can be used as collateral in ${brand.stableTokenSymbol} markets if the pair is whitelisted.`)
     } catch (error) {
       setStatus(describeError(error as { shortMessage?: string; message?: string }))
     }
@@ -139,7 +140,7 @@ export function SwapAndLpPanel() {
             </div>
             <div className="gauge-metrics">
               <span>{pool.userLpBalance} LP held</span>
-              <span>{pool.rewardInventory} VEIL epoch flow</span>
+              <span>{pool.rewardInventory} {brand.governanceTokenSymbol} epoch flow</span>
             </div>
           </label>
         ))}
@@ -185,7 +186,7 @@ export function SwapAndLpPanel() {
         </div>
         <div>
           <span className="muted">Collateral path</span>
-          <strong>{selectedPool.symbol} feeds vhUSD</strong>
+          <strong>{selectedPool.symbol} feeds {brand.stableTokenSymbol}</strong>
         </div>
       </div>
 

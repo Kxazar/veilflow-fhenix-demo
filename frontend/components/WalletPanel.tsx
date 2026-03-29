@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useAccount, useBalance, useConnect, useDisconnect } from 'wagmi'
 
+import { brand } from '@/lib/brand'
 import { useCofhe } from '@/hooks/useCofhe'
 import { usePermit } from '@/hooks/usePermit'
 
@@ -37,7 +38,7 @@ export function WalletPanel() {
     <section className="panel wallet-panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Wallet rail</p>
+          <p className="eyebrow">{brand.protocol} wallet rail</p>
           <h3>Permit-aware operator console</h3>
         </div>
         <span className="status-pill">{isConnected ? 'Wallet connected' : 'Wallet optional'}</span>
@@ -85,7 +86,7 @@ export function WalletPanel() {
       <p className="supporting-copy">
         {mode === 'live' && liveReady
           ? 'This deployment is wired for live encrypted writes. Connect a wallet, mint a permit, and submit FHE payloads.'
-          : 'This deployment is in demo-first mode. The wallet rail is still useful for previewing the live Fhenix flow once contract addresses and endpoints are injected via env.'}
+          : `This deployment is in demo-first mode. The wallet rail is still useful for previewing the live ${brand.protocol} flow once contract addresses and endpoints are injected via env.`}
       </p>
 
       <div className="permit-box">

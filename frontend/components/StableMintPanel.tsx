@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useAccount, usePublicClient, useWriteContract } from 'wagmi'
 
 import { useCofhe } from '@/hooks/useCofhe'
+import { brand } from '@/lib/brand'
 import { collateralTokens, confidentialStableControllerAbi, contracts, erc20Abi, isLiveConfigured, stableTokenAbi } from '@/lib/contracts'
 import { demoCollateralTypes, demoStablePosition } from '@/lib/demo-data'
 
@@ -75,7 +76,7 @@ export function StableMintPanel() {
     }
 
     try {
-      setStatus('Submitting encrypted vhUSD mint request...')
+      setStatus(`Submitting encrypted ${brand.stableTokenSymbol} mint request...`)
 
       await writeContractAsync({
         address: contracts.stableController,
@@ -106,7 +107,7 @@ export function StableMintPanel() {
     }
 
     try {
-      setStatus('Reading encrypted debt and vhUSD balance...')
+      setStatus(`Reading encrypted debt and ${brand.stableTokenSymbol} balance...`)
 
       const debtHandle = await publicClient.readContract({
         address: contracts.stableController,
@@ -137,7 +138,7 @@ export function StableMintPanel() {
 
       setDecryptedDebt(debtResult.data.toString())
       setDecryptedStable(stableResult.data.toString())
-      setStatus('Encrypted debt and stable balance decrypted with the active permit.')
+      setStatus(`Encrypted debt and ${brand.stableTokenSymbol} balance decrypted with the active permit.`)
     } catch (error) {
       setStatus(describeError(error as { shortMessage?: string; message?: string }))
     }
@@ -147,8 +148,8 @@ export function StableMintPanel() {
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Shielded stablecoin</p>
-          <h3>Mint vhUSD against selected LP pairs at 160% collateral</h3>
+          <p className="eyebrow">Private credit rail</p>
+          <h3>Mint {brand.stableTokenSymbol} against selected LP pairs at 160% collateral</h3>
         </div>
       </div>
 
@@ -206,7 +207,7 @@ export function StableMintPanel() {
           Deposit LP
         </button>
         <button className="button" disabled={isPending} onClick={() => void handleMint()}>
-          {isPending ? 'Pending...' : 'Encrypt and mint vhUSD'}
+          {isPending ? 'Pending...' : `Encrypt and mint ${brand.stableTokenSymbol}`}
         </button>
         <button className="button button-secondary" onClick={() => void handleDecryptPosition()}>
           Reveal my debt
@@ -220,11 +221,13 @@ export function StableMintPanel() {
         </div>
         <div>
           <span className="muted">160% max mint</span>
-          <strong>{demoStablePosition.maxMintableAt160} vhUSD</strong>
+          <strong>{demoStablePosition.maxMintableAt160} {brand.stableTokenSymbol}</strong>
         </div>
         <div>
           <span className="muted">Decrypted position</span>
-          <strong>{decryptedDebt ? `${decryptedDebt} debt / ${decryptedStable ?? '0'} vhUSD` : 'hidden'}</strong>
+          <strong>
+            {decryptedDebt ? `${decryptedDebt} debt / ${decryptedStable ?? '0'} ${brand.stableTokenSymbol}` : 'hidden'}
+          </strong>
         </div>
       </div>
 

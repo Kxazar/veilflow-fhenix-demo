@@ -94,7 +94,7 @@ async function main() {
   }
 
   console.log(`Wallet under test: ${wallet.address}`)
-  console.log(`VEIL token: ${await stack.voteToken.getAddress()}`)
+  console.log(`NTRA token: ${await stack.voteToken.getAddress()}`)
   console.log(`Gauge controller: ${await stack.gaugeController.getAddress()}`)
   console.log(`Stable controller: ${await stack.stableController.getAddress()}`)
 
@@ -103,7 +103,7 @@ async function main() {
   await (await fhUsdc.faucet.connect(wallet).claim()).wait()
   await (await wBtc.faucet.connect(wallet).claim()).wait()
   await (await sDai.faucet.connect(wallet).claim()).wait()
-  console.log('Claimed VEIL and all market assets from their faucets.')
+  console.log('Claimed NTRA and all market assets from their faucets.')
 
   await (await stack.voteToken.connect(wallet).approve(await stack.gaugeController.getAddress(), 100n)).wait()
   await (await stack.gaugeController.connect(wallet).lock(60n, BigInt(2 * 365 * 24 * 60 * 60))).wait()
@@ -115,7 +115,7 @@ async function main() {
   await initializeEthersWallet(wallet, owner)
   const encryptedVeilBalance = await stack.voteToken.encBalances(wallet.address)
   const revealedWrappedVeil = await hre.cofhe.expectResultSuccess(cofhejs.unseal(encryptedVeilBalance, FheTypes.Uint128))
-  console.log(`Wrapped VEIL balance decrypted for holder: ${revealedWrappedVeil.toString()}`)
+  console.log(`Wrapped NTRA balance decrypted for holder: ${revealedWrappedVeil.toString()}`)
 
   const epochId = await stack.gaugeController.currentEpoch()
   await (await stack.gaugeController.connect(wallet).vote(epochId, await encryptUint8(wallet, owner, 2n))).wait()
@@ -158,8 +158,8 @@ async function main() {
 
   const revealedStableBalance = await hre.cofhe.expectResultSuccess(cofhejs.unseal(encryptedStableBalance, FheTypes.Uint128))
   const revealedDebt = await hre.cofhe.expectResultSuccess(cofhejs.unseal(encryptedStableDebt, FheTypes.Uint128))
-  console.log(`vhUSD balance decrypted for holder: ${revealedStableBalance.toString()}`)
-  console.log(`vhUSD debt decrypted for holder: ${revealedDebt.toString()}`)
+  console.log(`nUSD balance decrypted for holder: ${revealedStableBalance.toString()}`)
+  console.log(`nUSD debt decrypted for holder: ${revealedDebt.toString()}`)
 
   await (
     await stack.stableToken
@@ -170,7 +170,7 @@ async function main() {
   await initializeHardhatSigner(guardian)
   const guardianEncryptedStable = await stack.stableToken.encBalances(guardian.address)
   const guardianStableBalance = await hre.cofhe.expectResultSuccess(cofhejs.unseal(guardianEncryptedStable, FheTypes.Uint128))
-  console.log(`Encrypted stable transfer succeeded, guardian received: ${guardianStableBalance.toString()} vhUSD`)
+  console.log(`Encrypted stable transfer succeeded, guardian received: ${guardianStableBalance.toString()} nUSD`)
 
   await hre.network.provider.send('evm_increaseTime', [7 * 24 * 60 * 60 + 5])
   await hre.network.provider.send('evm_mine')
@@ -188,14 +188,14 @@ async function main() {
   const gaugeOneEmission = await stack.gaugeController.epochGaugeEmission(epochId, 1)
   const gaugeTwoEmission = await stack.gaugeController.epochGaugeEmission(epochId, 2)
   console.log(
-    `Settled VEIL emissions: ETH/fhUSDC=${gaugeZeroEmission.toString()}, wBTC/fhETH=${gaugeOneEmission.toString()}, sDAI/fhUSDC=${gaugeTwoEmission.toString()}`,
+    `Settled NTRA emissions: ETH/fhUSDC=${gaugeZeroEmission.toString()}, wBTC/fhETH=${gaugeOneEmission.toString()}, sDAI/fhUSDC=${gaugeTwoEmission.toString()}`,
   )
 
   const poolZeroVeil = await stack.voteToken.balanceOf(await ethUsdcPool.pool.getAddress())
   const poolOneVeil = await stack.voteToken.balanceOf(await wBtcEthPool.pool.getAddress())
   const poolTwoVeil = await stack.voteToken.balanceOf(await sDaiUsdcPool.pool.getAddress())
   console.log(
-    `Gauge recipients received VEIL on-chain: pool0=${poolZeroVeil.toString()}, pool1=${poolOneVeil.toString()}, pool2=${poolTwoVeil.toString()}`,
+    `Gauge recipients received NTRA on-chain: pool0=${poolZeroVeil.toString()}, pool1=${poolOneVeil.toString()}, pool2=${poolTwoVeil.toString()}`,
   )
 }
 

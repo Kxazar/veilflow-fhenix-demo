@@ -7,13 +7,14 @@ import { GaugeBoard } from '@/components/GaugeBoard'
 import { LockPlanner } from '@/components/LockPlanner'
 import { StableMintPanel } from '@/components/StableMintPanel'
 import { SwapAndLpPanel } from '@/components/SwapAndLpPanel'
+import { brand } from '@/lib/brand'
 
 const tabs = [
   { id: 'faucet', label: 'Faucet' },
-  { id: 'governance', label: 'veVEIL' },
-  { id: 'gauges', label: 'Hidden Gauges' },
+  { id: 'governance', label: brand.veGovernanceTokenSymbol },
+  { id: 'gauges', label: 'Shadow Gauges' },
   { id: 'pools', label: 'Swap & LP' },
-  { id: 'stable', label: 'vhUSD' },
+  { id: 'stable', label: brand.stableTokenSymbol },
 ] as const
 
 type TabId = (typeof tabs)[number]['id']
@@ -21,21 +22,24 @@ type TabId = (typeof tabs)[number]['id']
 const visibilityRows = [
   { label: 'Public to everyone', value: 'lock notional, approved LP deposits, emission budget, whitelisted pools' },
   { label: 'Hidden until reveal', value: 'which gauge a voter selected and the per-gauge totals during the epoch' },
-  { label: 'Only the holder can reveal', value: 'wrapped VEIL balances, vhUSD balance, and vhUSD debt' },
+  {
+    label: 'Only the holder can reveal',
+    value: `wrapped ${brand.governanceTokenSymbol} balances, ${brand.stableTokenSymbol} balance, and ${brand.stableTokenSymbol} debt`,
+  },
 ]
 
 export function ProtocolTabs() {
   const [activeTab, setActiveTab] = useState<TabId>('faucet')
 
   return (
-    <section className="panel protocol-shell">
+    <section className="panel protocol-shell" id="protocol-workspace">
       <div className="panel-header protocol-header">
         <div>
-          <p className="eyebrow">Protocol workspace</p>
-          <h2>Split by function, not by contract file</h2>
+          <p className="eyebrow">{brand.protocol} control surface</p>
+          <h2>Every system rail gets its own lane</h2>
         </div>
         <p className="protocol-header-copy">
-          Each tab isolates one user journey so ve governance, hidden gauges, and shielded stablecoin actions do not
+          Each tab isolates one user journey so governance, shadow routing, pool building, and private credit do not
           compete for attention on the same screen.
         </p>
       </div>

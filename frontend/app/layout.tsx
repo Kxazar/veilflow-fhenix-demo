@@ -2,12 +2,13 @@ import type { Metadata } from 'next'
 import { ReactNode } from 'react'
 
 import { Providers } from '@/components/Providers'
+import { brand } from '@/lib/brand'
 
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'VeilFlow',
-  description: 'Confidential ve-tokenomics and shielded LP-backed stablecoin demo built on Fhenix CoFHE.',
+  title: brand.protocol,
+  description: `${brand.protocol} is a confidential ve-tokenomics, swap, LP, and shielded stablecoin demo built on Fhenix CoFHE.`,
   icons: {
     icon: '/icon.svg',
     shortcut: '/icon.svg',

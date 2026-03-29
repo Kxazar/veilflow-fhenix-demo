@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useAccount, useWriteContract } from 'wagmi'
 
+import { brand } from '@/lib/brand'
 import { contracts, isLiveConfigured, gaugeControllerAbi, veilTokenAbi } from '@/lib/contracts'
 
 const MAX_LOCK_DAYS = 4 * 365
@@ -37,8 +38,7 @@ export function LockPlanner() {
     }
 
     try {
-      setStatus('Approving VEIL for the gauge controller...')
-
+      setStatus(`Approving ${brand.governanceTokenSymbol} for the gauge controller...`)
       await writeContractAsync({
         address: contracts.voteToken,
         abi: veilTokenAbi,
@@ -63,12 +63,12 @@ export function LockPlanner() {
 
   const handleWrap = async () => {
     if (!address || !isLiveConfigured) {
-      setStatus('Wrap is available once a live VEIL token address is configured.')
+      setStatus(`Wrap is available once a live ${brand.governanceTokenSymbol} token address is configured.`)
       return
     }
 
     try {
-      setStatus('Wrapping VEIL into encrypted balance...')
+      setStatus(`Wrapping ${brand.governanceTokenSymbol} into encrypted balance...`)
 
       await writeContractAsync({
         address: contracts.voteToken,
@@ -77,7 +77,7 @@ export function LockPlanner() {
         args: [address, BigInt(wrapAmount)],
       })
 
-      setStatus('Wrapped balance submitted. Your public VEIL moved into encrypted storage.')
+      setStatus(`Wrapped balance submitted. Your public ${brand.governanceTokenSymbol} moved into encrypted storage.`)
     } catch (error) {
       setStatus(describeError(error as { shortMessage?: string; message?: string }))
     }
@@ -87,8 +87,8 @@ export function LockPlanner() {
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">ve tokenomics</p>
-          <h3>Lock planner and encrypted VEIL rail</h3>
+          <p className="eyebrow">{brand.veGovernanceTokenSymbol}</p>
+          <h3>Lock planner and encrypted {brand.governanceTokenSymbol} rail</h3>
         </div>
       </div>
 
@@ -103,7 +103,7 @@ export function LockPlanner() {
             type="range"
             value={lockAmount}
           />
-          <strong>{lockAmount} VEIL</strong>
+          <strong>{lockAmount} {brand.governanceTokenSymbol}</strong>
         </label>
 
         <label className="field">
@@ -120,7 +120,7 @@ export function LockPlanner() {
         </label>
 
         <label className="field">
-          <span>Wrap into encrypted VEIL</span>
+          <span>Wrap into encrypted {brand.governanceTokenSymbol}</span>
           <input
             className="input"
             max={1000}
@@ -129,14 +129,14 @@ export function LockPlanner() {
             type="range"
             value={wrapAmount}
           />
-          <strong>{wrapAmount} VEIL</strong>
+          <strong>{wrapAmount} {brand.governanceTokenSymbol}</strong>
         </label>
       </div>
 
       <div className="metric-band">
         <div>
           <span className="muted">Estimated voting power</span>
-          <strong>{votingPower} veVEIL</strong>
+          <strong>{votingPower} {brand.veGovernanceTokenSymbol}</strong>
         </div>
         <div>
           <span className="muted">Time premium</span>
@@ -144,7 +144,7 @@ export function LockPlanner() {
         </div>
         <div>
           <span className="muted">Wrapped side-pocket</span>
-          <strong>{wrapAmount} shielded VEIL</strong>
+          <strong>{wrapAmount} shielded {brand.governanceTokenSymbol}</strong>
         </div>
       </div>
 
@@ -153,13 +153,13 @@ export function LockPlanner() {
           {isPending ? 'Pending...' : 'Approve and lock'}
         </button>
         <button className="button button-secondary" disabled={isPending} onClick={() => void handleWrap()}>
-          Encrypt VEIL balance
+          Encrypt {brand.governanceTokenSymbol} balance
         </button>
       </div>
 
       <p className="supporting-copy">
-        The public lock sets your ve weight, while wrapped VEIL showcases the separate FHERC20-style encrypted balance
-        lane adapted from the Fhenix hook template.
+        The public lock sets your ve weight, while wrapped {brand.governanceTokenSymbol} showcases the separate
+        FHERC20-style encrypted balance lane adapted from the Fhenix hook template.
       </p>
 
       {status ? <p className="supporting-copy">{status}</p> : null}

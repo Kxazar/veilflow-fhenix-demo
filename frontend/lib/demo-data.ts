@@ -1,3 +1,5 @@
+import { brand } from '@/lib/brand'
+
 export const demoEpoch = {
   id: 0,
   weeklyEmission: 12_500,
@@ -103,6 +105,6 @@ export const demoStablePosition = {
 export const protocolHighlights = [
   've-style lockups create time-decaying voting power similar to Curve and Aerodrome.',
   'Gauge votes stay encrypted during the epoch, so routing intent is hidden until reveal.',
-  'Selected LP pairs can back vhUSD at a minimum 160% collateral ratio.',
-  'Both VEIL and vhUSD support wrapped encrypted balances for shielded treasury and user flows.',
+  `Selected LP pairs can back ${brand.stableTokenSymbol} at a minimum 160% collateral ratio.`,
+  `Both ${brand.governanceTokenSymbol} and ${brand.stableTokenSymbol} support wrapped encrypted balances for shielded treasury and user flows.`,
 ]

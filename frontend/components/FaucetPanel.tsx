@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useAccount, useWriteContract } from 'wagmi'
 
+import { brand } from '@/lib/brand'
 import { contracts, faucetAbi, isFaucetConfigured, marketAssets } from '@/lib/contracts'
 import { demoAssets } from '@/lib/demo-data'
 
@@ -21,14 +22,14 @@ export function FaucetPanel() {
   const { address } = useAccount()
   const { writeContractAsync, isPending } = useWriteContract()
 
-  const [selectedFaucetId, setSelectedFaucetId] = useState('VEIL')
+  const [selectedFaucetId, setSelectedFaucetId] = useState<string>(brand.governanceTokenSymbol)
   const [status, setStatus] = useState<string | null>(null)
 
   const faucets = useMemo<FaucetItem[]>(
     () => [
       {
-        id: 'VEIL',
-        title: 'VEIL',
+        id: brand.governanceTokenSymbol,
+        title: brand.governanceTokenSymbol,
         amount: 100,
         faucetAddress: isFaucetConfigured ? contracts.faucet : null,
       },
@@ -72,8 +73,8 @@ export function FaucetPanel() {
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Protocol faucets</p>
-          <h3>Bootstrap VEIL and market assets on-chain</h3>
+          <p className="eyebrow">Bootstrap rail</p>
+          <h3>Seed {brand.governanceTokenSymbol} and market assets</h3>
         </div>
       </div>
 
@@ -112,8 +113,8 @@ export function FaucetPanel() {
       </div>
 
       <p className="supporting-copy">
-        VEIL and market faucets are rate-limited in the contracts themselves. That means the website cannot bypass the
-        one-wallet-per-24-hour rule even if someone replays the UI.
+        {brand.governanceTokenSymbol} and market faucets are rate-limited in the contracts themselves. That means the
+        website cannot bypass the one-wallet-per-24-hour rule even if someone replays the UI.
       </p>
 
       {status ? <p className="supporting-copy">{status}</p> : null}

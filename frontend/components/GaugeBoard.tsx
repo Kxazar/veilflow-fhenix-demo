@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useAccount, usePublicClient, useWriteContract } from 'wagmi'
 
 import { useCofhe } from '@/hooks/useCofhe'
+import { brand } from '@/lib/brand'
 import { demoEpoch, demoGauges } from '@/lib/demo-data'
 import { contracts, gaugeControllerAbi, isLiveConfigured } from '@/lib/contracts'
 
@@ -114,8 +115,8 @@ export function GaugeBoard() {
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Confidential gauges</p>
-          <h3>Vote routing without leaking the trade before the epoch ends</h3>
+          <p className="eyebrow">Shadow gauges</p>
+          <h3>Route emissions without leaking the trade before epoch close</h3>
         </div>
       </div>
 
@@ -135,7 +136,7 @@ export function GaugeBoard() {
             </div>
             <div className="gauge-metrics">
               <span>{gauge.revealedWeight} weight</span>
-              <span>{gauge.emissionShare} VEIL / week</span>
+              <span>{gauge.emissionShare} {brand.governanceTokenSymbol} / week</span>
             </div>
           </label>
         ))}
@@ -177,7 +178,7 @@ export function GaugeBoard() {
         </div>
         <div>
           <span className="muted">Weekly budget</span>
-          <strong>{demoEpoch.weeklyEmission} VEIL</strong>
+          <strong>{demoEpoch.weeklyEmission} {brand.governanceTokenSymbol}</strong>
         </div>
       </div>
 

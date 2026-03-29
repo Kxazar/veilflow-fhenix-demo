@@ -1,11 +1,11 @@
-# VeilFlow: Fhenix Confidential DeFi Demo
+# Noctra Arc: Fhenix Confidential DeFi Demo
 
 This repository started from the official `cofhe-hardhat-starter` and now contains a larger Fhenix showcase:
 
 - confidential private voting
 - a ve-style gauge controller inspired by Curve and Aerodrome
-- wrapped encrypted VEIL balances adapted from the FHERC20 patterns in `marronjo/fhe-hook-template`
-- an on-chain VEIL faucet that dispenses 100 tokens once per 24 hours per wallet
+- wrapped encrypted NTRA balances adapted from the FHERC20 patterns in `marronjo/fhe-hook-template`
+- an on-chain NTRA faucet that dispenses 100 tokens once per 24 hours per wallet
 - market asset faucets for `fhETH`, `fhUSDC`, `wBTC`, and `sDAI`
 - constant-product swap pools with LP minting
 - a shielded LP-backed stablecoin controller with 160% minimum collateralization
@@ -38,9 +38,9 @@ A hybrid vote token with:
 
 ### `VeilFaucet`
 
-An on-chain faucet for `VEIL` where:
+An on-chain faucet for `NTRA` where:
 
-- each wallet can claim `100 VEIL`
+- each wallet can claim `100 NTRA`
 - claims are limited to one request every `24 hours`
 - cooldown enforcement lives in the contract, not in the frontend
 
@@ -63,11 +63,11 @@ A stablecoin rail where:
 - collateral values are tracked with configurable prices
 - users submit encrypted desired mint amounts
 - the controller clips the encrypted request to the safe headroom
-- vhUSD debt and vhUSD balances remain encrypted until the holder decrypts them with a permit
+- `nUSD` debt and `nUSD` balances remain encrypted until the holder decrypts them with a permit
 
 ### `frontend/`
 
-A Next.js app called `VeilFlow` that includes:
+A Next.js app called `Noctra Arc` that includes:
 
 - wallet + permit rail
 - ve lock planner

@@ -1,5 +1,6 @@
 'use client'
 
+import { brand } from '@/lib/brand'
 import { useCofhe } from '@/hooks/useCofhe'
 
 export function ModeStatus() {
@@ -9,7 +10,7 @@ export function ModeStatus() {
     <section className="panel panel-tight">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">CoFHE status</p>
+          <p className="eyebrow">{brand.protocol} runtime</p>
           <h3>Execution rail</h3>
         </div>
         <span className={`status-pill ${mode === 'live' && liveReady ? 'status-live' : 'status-demo'}`}>
