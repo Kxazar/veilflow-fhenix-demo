@@ -79,6 +79,11 @@ export function WalletControls() {
         <strong>{address ? shortenAddress(address) : 'not connected'}</strong>
       </div>
 
+      <div className={`wallet-network-hint ${wrongNetwork ? 'wallet-network-hint-warning' : ''}`}>
+        <span className="muted">Live network</span>
+        <strong>{appChain.name}</strong>
+      </div>
+
       {phaseLabel ? (
         <div className={`status-pill ${phase === 'ready' && !wrongNetwork ? 'status-live' : 'status-demo'}`}>{phaseLabel}</div>
       ) : null}
